@@ -1,0 +1,5 @@
+services:
+  cloudcheckin:
+    build:
+      context: .
+    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}

@@ -179,14 +179,12 @@ COOKIE_CLOUD_CRYPTO_TYPE=
 
 ## Docker Compose / NAS 部署
 
-如果你希望部署在自己的 NAS 上，可以直接使用仓库内置的 `docker-compose.yml`。
+如果你希望部署在自己的 NAS 上，默认应该直接使用仓库内置的 `docker-compose.yml` 从 Docker Hub 拉取镜像，而不是在服务器本地 `build`。
 
 ```bash
 services:
   cloudcheckin:
-    build:
-      context: .
-    image: cloudcheckin:latest
+    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
     env_file:
       - .env
     environment:
@@ -195,19 +193,28 @@ services:
     command: ["python", "run.py"]
 ```
 
-准备好 `.env` 后，直接执行：
+准备好 `.env` 后，服务器上推荐执行：
 
 ```bash
+docker compose pull
 docker compose run --rm cloudcheckin
 ```
 
 如果只想执行部分平台，可以在 `.env` 中设置：
 
 ```bash
+CLOUDCHECKIN_IMAGE=tophtab/cloudcheckin:latest
 CHECKIN_TARGETS=nodeseek,deepflood,v2ex
 ```
 
 这个 Compose 服务默认是一次性执行并退出，这样更适合 NAS 自带的计划任务或容器调度能力按天触发。
+
+如果你是在本地开发，确实需要从当前源码构建镜像，再额外使用仓库提供的 `docker-compose.build.yml`：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml build
+docker compose -f docker-compose.yml -f docker-compose.build.yml run --rm cloudcheckin
+```
 
 ## 本地调试
 

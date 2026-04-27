@@ -140,14 +140,13 @@ Automatic domain matching is included for:
 ## Docker Compose / NAS Deployment
 
 If you want to run this project on your own NAS, the repository now includes a
-ready-to-use `docker-compose.yml`.
+ready-to-use `docker-compose.yml` that pulls the published Docker Hub image by
+default instead of building on the server.
 
 ```bash
 services:
   cloudcheckin:
-    build:
-      context: .
-    image: cloudcheckin:latest
+    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
     env_file:
       - .env
     environment:
@@ -156,20 +155,30 @@ services:
     command: ["python", "run.py"]
 ```
 
-Once your `.env` is ready, run:
+Once your `.env` is ready, the recommended server flow is:
 
 ```bash
+docker compose pull
 docker compose run --rm cloudcheckin
 ```
 
 If you only want selected platforms, set this in `.env`:
 
 ```bash
+CLOUDCHECKIN_IMAGE=tophtab/cloudcheckin:latest
 CHECKIN_TARGETS=nodeseek,deepflood,v2ex
 ```
 
 The Compose service is designed to run once and exit, which fits NAS schedulers and
 cron-style container tasks better than keeping a long-running idle container.
+
+If you are developing locally and really want to build from the current source
+tree, use the provided `docker-compose.build.yml` override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml build
+docker compose -f docker-compose.yml -f docker-compose.build.yml run --rm cloudcheckin
+```
 
 ## Local Development
 

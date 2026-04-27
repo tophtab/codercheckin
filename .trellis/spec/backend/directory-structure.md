@@ -51,6 +51,7 @@ controller/service/repository, or ORM-based layouts that do not exist here.
 |-- Dockerfile
 |-- worker.js
 |-- docker-compose.yml
+|-- docker-compose.build.yml
 |-- run.py
 |-- requirements.txt
 |-- README.md

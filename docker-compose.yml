@@ -1,8 +1,6 @@
 services:
   cloudcheckin:
-    build:
-      context: .
-    image: cloudcheckin:latest
+    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
     env_file:
       - .env
     environment:
