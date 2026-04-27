@@ -1,0 +1,4 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/guides/index.md", "reason": "Shared thinking guide index for reuse and cross-layer checks while documenting conventions"}
+{"file": "README.md", "reason": "Project architecture, platform list, local debug flow, and secret setup conventions to reflect actual backend patterns"}

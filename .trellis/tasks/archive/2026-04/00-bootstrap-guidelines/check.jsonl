@@ -1,0 +1,4 @@
+{"file": ".claude/commands/trellis/finish-work.md", "reason": "Finish work checklist"}
+{"file": ".claude/commands/trellis/check.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/guides/index.md", "reason": "Shared thinking guide index for review of reuse and cross-layer considerations in guidelines"}
+{"file": "README.md", "reason": "Project architecture and operational conventions used to verify the written backend guidelines match the repository"}
