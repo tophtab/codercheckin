@@ -26,62 +26,6 @@ Automatically complete platform tasks daily. After completion, notifications wil
   - Automatic check-in
   - Automatic quiz completion
 
-## Docker / NAS Deployment
-
-If you want to run this project on your own NAS, the repository now includes a
-container-friendly deployment flow.
-
-```bash
-# Copy the environment template
-cp .env.localtest.example .env
-
-# Edit .env and fill in Telegram, direct cookies, or Cookie Cloud settings
-
-# Build the image
-docker compose build
-
-# Run all tasks once
-docker compose run --rm cloudcheckin
-```
-
-If you only want selected platforms, set this in `.env`:
-
-```bash
-CHECKIN_TARGETS=nodeseek,deepflood,v2ex
-```
-
-The container is designed to run once and exit, which fits NAS schedulers and
-cron-style container tasks better than keeping a long-running idle container.
-
-## Cookie Cloud Support
-
-The project now supports downloading cookies from
-[Cookie Cloud](https://github.com/easychen/CookieCloud).
-
-Priority order:
-
-1. Use direct platform environment variables such as `NODESEEK_COOKIE`,
-   `DEEPFLOOD_COOKIE`, `V2EX_COOKIE`, and `ONEPOINT3ACRES_COOKIE`
-2. If the direct variable is empty, fall back to Cookie Cloud for the matching
-   site cookie set
-
-Add the following to `.env` to enable it:
-
-```bash
-COOKIE_CLOUD_URL=http://your-cookiecloud-host:8088
-COOKIE_CLOUD_UUID=your-uuid
-COOKIE_CLOUD_PASSWORD=your-password
-# Set to aes-128-cbc-fixed for newer instances when needed; otherwise leave empty
-COOKIE_CLOUD_CRYPTO_TYPE=
-```
-
-Automatic domain matching is included for:
-
-- `nodeseek.com`
-- `deepflood.com`
-- `v2ex.com`
-- `1point3acres.com`
-
 ## Architecture
 
 ![](https://cdn.jsdelivr.net/gh/timerring/scratchpad2023/2024/2025-06-01-17-53-56.png)
@@ -163,6 +107,69 @@ https://github.com/timerring/CloudCheckin/blob/0b719258ab4f5f746b067798eb2a4185a
 #### Sync Configuration
 
 After configuring all content, please manually execute the `Setup CircleCI Context and Secrets` and `Deploy Cloudflare Worker` workflows once to ensure that configuration secrets are correctly synchronized to CircleCI contexts secrets through CircleCI CLI, and that the Cloudflare Worker is properly deployed. (Actions -> `Setup CircleCI Context and Secrets` -> `Run workflow` and Actions -> `Deploy Cloudflare Worker` -> `Run workflow`)
+
+## Cookie Cloud Support
+
+The project now supports downloading cookies from
+[Cookie Cloud](https://github.com/easychen/CookieCloud).
+
+Priority order:
+
+1. Use direct platform environment variables such as `NODESEEK_COOKIE`,
+   `DEEPFLOOD_COOKIE`, `V2EX_COOKIE`, and `ONEPOINT3ACRES_COOKIE`
+2. If the direct variable is empty, fall back to Cookie Cloud for the matching
+   site cookie set
+
+Add the following to `.env` to enable it:
+
+```bash
+COOKIE_CLOUD_URL=http://your-cookiecloud-host:8088
+COOKIE_CLOUD_UUID=your-uuid
+COOKIE_CLOUD_PASSWORD=your-password
+# Set to aes-128-cbc-fixed for newer instances when needed; otherwise leave empty
+COOKIE_CLOUD_CRYPTO_TYPE=
+```
+
+Automatic domain matching is included for:
+
+- `nodeseek.com`
+- `deepflood.com`
+- `v2ex.com`
+- `1point3acres.com`
+
+## Docker Compose / NAS Deployment
+
+If you want to run this project on your own NAS, the repository now includes a
+ready-to-use `docker-compose.yml`.
+
+```bash
+services:
+  cloudcheckin:
+    build:
+      context: .
+    image: cloudcheckin:latest
+    env_file:
+      - .env
+    environment:
+      CHECKIN_TARGETS: ${CHECKIN_TARGETS:-nodeseek,deepflood,v2ex,onepoint3acres}
+      PYTHONUNBUFFERED: "1"
+    command: ["python", "run.py"]
+```
+
+Once your `.env` is ready, run:
+
+```bash
+docker compose run --rm cloudcheckin
+```
+
+If you only want selected platforms, set this in `.env`:
+
+```bash
+CHECKIN_TARGETS=nodeseek,deepflood,v2ex
+```
+
+The Compose service is designed to run once and exit, which fits NAS schedulers and
+cron-style container tasks better than keeping a long-running idle container.
 
 ## Local Development
 
