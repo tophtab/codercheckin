@@ -18,11 +18,69 @@ Automatically complete platform tasks daily. After completion, notifications wil
 
 - **Nodeseek**
   - Automatic check-in
+- **Deepflood**
+  - Automatic check-in
 - **V2EX**
   - Automatic check-in
 - **1Point3Acres**
   - Automatic check-in
   - Automatic quiz completion
+
+## Docker / NAS Deployment
+
+If you want to run this project on your own NAS, the repository now includes a
+container-friendly deployment flow.
+
+```bash
+# Copy the environment template
+cp .env.localtest.example .env
+
+# Edit .env and fill in Telegram, direct cookies, or Cookie Cloud settings
+
+# Build the image
+docker compose build
+
+# Run all tasks once
+docker compose run --rm cloudcheckin
+```
+
+If you only want selected platforms, set this in `.env`:
+
+```bash
+CHECKIN_TARGETS=nodeseek,deepflood,v2ex
+```
+
+The container is designed to run once and exit, which fits NAS schedulers and
+cron-style container tasks better than keeping a long-running idle container.
+
+## Cookie Cloud Support
+
+The project now supports downloading cookies from
+[Cookie Cloud](https://github.com/easychen/CookieCloud).
+
+Priority order:
+
+1. Use direct platform environment variables such as `NODESEEK_COOKIE`,
+   `DEEPFLOOD_COOKIE`, `V2EX_COOKIE`, and `ONEPOINT3ACRES_COOKIE`
+2. If the direct variable is empty, fall back to Cookie Cloud for the matching
+   site cookie set
+
+Add the following to `.env` to enable it:
+
+```bash
+COOKIE_CLOUD_URL=http://your-cookiecloud-host:8088
+COOKIE_CLOUD_UUID=your-uuid
+COOKIE_CLOUD_PASSWORD=your-password
+# Set to aes-128-cbc-fixed for newer instances when needed; otherwise leave empty
+COOKIE_CLOUD_CRYPTO_TYPE=
+```
+
+Automatic domain matching is included for:
+
+- `nodeseek.com`
+- `deepflood.com`
+- `v2ex.com`
+- `1point3acres.com`
 
 ## Architecture
 
@@ -75,10 +133,10 @@ https://github.com/timerring/CloudCheckin/blob/0b719258ab4f5f746b067798eb2a4185a
 #### Configure Check-in Platforms
 
 <details>
-<summary>Configure Nodeseek Check-in</summary>
+<summary>Configure Nodeseek / Deepflood Check-in</summary>
 
 1. Get the `cookie` from the Nodeseek website (for cookie acquisition methods, please refer to [COOKIE Acquisition Tutorial](https://blog.timerring.com/posts/the-way-to-get-cookie/))
-2. Add the `cookie` to repository secrets with the name `NODESEEK_COOKIE`
+2. Add the `cookie` to repository secrets with the name `NODESEEK_COOKIE` / `DEEPFLOOD_COOKIE`
 
 </details>
 
@@ -117,8 +175,12 @@ cp .env.localtest.example .env
 
 # Run check-in scripts
 python -m nodeseek.nodeseek
+python -m deepflood.deepflood
 python -m v2ex.v2ex
 python -m onepoint3acres.onepoint3acres
+
+# Or run selected targets in one batch
+python run.py
 ```
 
 ## FAQ

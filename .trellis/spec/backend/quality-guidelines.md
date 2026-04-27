@@ -43,6 +43,80 @@ Examples:
 - Environment validation in [onepoint3acres/onepoint3acres.py](/home/toph/CloudCheckin/onepoint3acres/onepoint3acres.py:183).
 - Local debug execution commands in [README.md](/home/toph/CloudCheckin/README.md:153).
 
+## Scenario: Docker runner and Cookie Cloud fallback
+
+### 1. Scope / Trigger
+
+- Trigger: changing Docker deployment files, batch execution entrypoints, or the way platform cookies are resolved from environment variables.
+
+### 2. Signatures
+
+- Batch entrypoint command: `python run.py`
+- Batch target selector env: `CHECKIN_TARGETS=nodeseek,deepflood,v2ex,onepoint3acres`
+- Shared resolver signature: `get_cookie_value(env_name: str, domains: list[str]) -> str`
+- Cookie Cloud endpoint shape: `POST <COOKIE_CLOUD_URL>/get/<COOKIE_CLOUD_UUID>?crypto_type=...`
+- Docker Hub publish workflow: `.github/workflows/dockerhub-publish.yml`
+
+### 3. Contracts
+
+- Direct platform environment variables remain first priority:
+  `NODESEEK_COOKIE`, `DEEPFLOOD_COOKIE`, `V2EX_COOKIE`, `ONEPOINT3ACRES_COOKIE`
+- Cookie Cloud is optional and only used when the direct platform variable is empty.
+- Cookie Cloud configuration uses environment variables only:
+  `COOKIE_CLOUD_URL`, `COOKIE_CLOUD_UUID`, `COOKIE_CLOUD_PASSWORD`, `COOKIE_CLOUD_CRYPTO_TYPE`
+- The shared resolver returns a request-ready cookie header string in `name=value; name2=value2` form.
+- If no direct cookie exists and Cookie Cloud cannot provide a matching domain cookie, the platform script must still fail fast before making network requests.
+- Docker Hub publishing uses GitHub repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
+- Optional GitHub repository variable `DOCKERHUB_IMAGE` overrides the default image name.
+- If `DOCKERHUB_IMAGE` is empty, the workflow publishes to `<DOCKERHUB_USERNAME>/cloudcheckin`.
+- The publish workflow runs automatically on pushes to `main`, pushes of `v*` git tags, and manual dispatch.
+
+### 4. Validation & Error Matrix
+
+| Condition | Expected Behavior |
+|----------|-------------------|
+| Direct platform cookie is set | Use it immediately and skip Cookie Cloud |
+| Direct platform cookie missing, Cookie Cloud configured, matching domain found | Use Cookie Cloud cookie and print a safe success hint |
+| Direct platform cookie missing, Cookie Cloud not configured | Return empty string and let the platform entrypoint raise `ValueError` |
+| Cookie Cloud request fails or returns bad JSON | Print a safe error, return empty string, and let the platform entrypoint fail fast |
+| `CHECKIN_TARGETS` contains unsupported names | `run.py` exits non-zero with the supported target list |
+| Docker Hub username/token missing | Workflow fails in login or image resolution before build/push |
+| `DOCKERHUB_IMAGE` contains uppercase letters | Workflow lowercases the final image name before metadata/build |
+
+### 5. Good / Base / Bad Cases
+
+- Good: `V2EX_COOKIE` is set explicitly, so [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:11) uses it without any Cookie Cloud dependency.
+- Base: `NODESEEK_COOKIE` is empty, Cookie Cloud is configured, and [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:20) builds the cookie header from the matched domain payload.
+- Bad: `ONEPOINT3ACRES_COOKIE` is empty and Cookie Cloud has no matching `1point3acres.com` cookie, so [onepoint3acres/onepoint3acres.py](/home/toph/CloudCheckin/onepoint3acres/onepoint3acres.py:223) raises before the sign-in flow starts.
+
+### 6. Tests Required
+
+- Syntax-check the runner, shared resolver, and affected platform modules with `python3 -m py_compile`.
+- Validate runner argument handling with an invalid `CHECKIN_TARGETS` value and assert non-zero exit plus a supported-target message.
+- Validate Docker wiring with `docker compose config` after providing a local `.env` file copied from `.env.localtest.example`.
+- Validate GitHub Actions workflow syntax with `actionlint`.
+- When real credentials are available, run the affected module with `python -m ...` or `python run.py` and assert the correct cookie source is used.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+Replace direct per-platform cookie support with a Cookie Cloud-only flow, or make the batch runner import platform modules directly:
+
+```python
+import nodeseek.nodeseek
+cookie = fetch_cookiecloud_only("nodeseek.com")
+```
+
+#### Correct
+
+Keep the original env contract, use Cookie Cloud only as fallback, and run existing module entrypoints through subprocesses:
+
+```python
+cookie = get_cookie_value("NODESEEK_COOKIE", ["nodeseek.com", "www.nodeseek.com"])
+subprocess.run([sys.executable, "-m", "nodeseek.nodeseek"], check=False)
+```
+
 ---
 
 ## Testing Requirements
@@ -79,3 +153,4 @@ add isolated tests rather than expanding the current manual-only model further.
 - Logging too little to debug CI failures, or too much sensitive data.
 - Changing an external request header or regex in one place without checking related Worker or Python variants.
 - Treating this project like a generic backend service and adding abstractions that make simple automation harder to trace.
+- Making Docker support bypass the documented `python -m ...` flows, which creates different behavior between local runs and container runs.

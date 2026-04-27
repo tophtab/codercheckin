@@ -1,0 +1,12 @@
+services:
+  cloudcheckin:
+    build:
+      context: .
+    image: cloudcheckin:latest
+    env_file:
+      - .env
+    environment:
+      CHECKIN_TARGETS: ${CHECKIN_TARGETS:-nodeseek,deepflood,v2ex,onepoint3acres}
+      PYTHONUNBUFFERED: "1"
+    command: ["python", "run.py"]
+

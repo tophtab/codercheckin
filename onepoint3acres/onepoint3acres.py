@@ -8,6 +8,7 @@ import http.cookies
 import time
 from dotenv import load_dotenv
 from .questions import questions
+from cookiecloud.client import get_cookie_value
 from telegram.notify import send_tg_notification
 
 load_dotenv()
@@ -212,12 +213,17 @@ class OnePointThreeAcres:
 
 
 if __name__ == "__main__":
-	cookie = os.environ.get('ONEPOINT3ACRES_COOKIE', '').strip()
+	cookie = get_cookie_value(
+		'ONEPOINT3ACRES_COOKIE',
+		['1point3acres.com', 'www.1point3acres.com', 'api.1point3acres.com'],
+	)
 	TwoCaptcha_apikey = os.environ.get('TWOCAPTCHA_APIKEY', '').strip()
 	
 	try:
 		if not cookie:
-			raise ValueError("Environment variable ONEPOINT3ACRES_COOKIE is not set")
+			raise ValueError(
+				"Environment variable ONEPOINT3ACRES_COOKIE is not set and Cookie Cloud has no matching cookie"
+			)
 		if not TwoCaptcha_apikey:
 			raise ValueError("Environment variable TWOCAPTCHA_APIKEY is not set")
 		
@@ -242,7 +248,6 @@ if __name__ == "__main__":
 	except Exception as err:
 		print(err, flush=True)
 		sys.exit(1)
-
 
 
 

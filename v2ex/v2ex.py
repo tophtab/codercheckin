@@ -4,11 +4,15 @@ import os
 from datetime import datetime, timedelta
 import sys
 from dotenv import load_dotenv
+from cookiecloud.client import get_cookie_value
 from telegram.notify import send_tg_notification
 
 load_dotenv()
 
-cookie = os.environ.get('V2EX_COOKIE', '').strip()
+cookie = get_cookie_value(
+    'V2EX_COOKIE',
+    ['v2ex.com', 'www.v2ex.com'],
+)
 # Initial the message time
 time = datetime.now() + timedelta(hours=8)
 message = time.strftime("%Y/%m/%d %H:%M:%S") + " from V2EX \n"
@@ -109,7 +113,9 @@ def balance() -> tuple[str, str]:
 if __name__ == "__main__":
     try:
         if not cookie:
-            raise ValueError("Environment variable V2EX_COOKIE is not set")
+            raise ValueError(
+                "Environment variable V2EX_COOKIE is not set and Cookie Cloud has no matching cookie"
+            )
         
         # get the once number and whether signed
         once, signed = get_once()

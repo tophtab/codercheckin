@@ -4,15 +4,21 @@ from curl_cffi import requests
 import random
 import time
 from dotenv import load_dotenv
+from cookiecloud.client import get_cookie_value
 from telegram.notify import send_tg_notification
 
 load_dotenv()
 
 # Get COOKIE from environment variable, multiple cookies separated by &
-cookies = os.environ.get('DEEPFLOOD_COOKIE', '').strip()
+cookies = get_cookie_value(
+    'DEEPFLOOD_COOKIE',
+    ['deepflood.com', 'www.deepflood.com'],
+)
 
 if not cookies:
-    raise ValueError("Environment variable DEEPFLOOD_COOKIE is not set")
+    raise ValueError(
+        "Environment variable DEEPFLOOD_COOKIE is not set and Cookie Cloud has no matching cookie"
+    )
     sys.exit(1)
 
 # Split multiple cookies by & to form a list

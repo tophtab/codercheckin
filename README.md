@@ -26,6 +26,57 @@
   - 自动签到
   - 自动答题
 
+## Docker / NAS 部署
+
+如果你希望部署在自己的 NAS 上，可以直接使用仓库内置的 Docker 支持。
+
+```bash
+# 复制环境变量模板
+cp .env.localtest.example .env
+
+# 编辑 .env，填写 Telegram、各平台 Cookie 或 Cookie Cloud 配置
+
+# 构建镜像
+docker compose build
+
+# 执行一次全部任务
+docker compose run --rm cloudcheckin
+```
+
+如果只想执行部分平台，可以在 `.env` 中设置：
+
+```bash
+CHECKIN_TARGETS=nodeseek,deepflood,v2ex
+```
+
+容器默认是一次性执行并退出，这样更适合 NAS 自带的计划任务或容器调度能力按天触发。
+
+## Cookie Cloud 支持
+
+项目现在支持通过 [Cookie Cloud](https://github.com/easychen/CookieCloud) 自动下载 Cookie。
+
+读取优先级如下：
+
+1. 直接使用平台专属环境变量，如 `NODESEEK_COOKIE`、`DEEPFLOOD_COOKIE`、`V2EX_COOKIE`、`ONEPOINT3ACRES_COOKIE`
+2. 如果对应环境变量为空，则尝试通过 Cookie Cloud 下载匹配站点的 Cookie
+
+在 `.env` 中补充以下配置即可启用：
+
+```bash
+COOKIE_CLOUD_URL=http://your-cookiecloud-host:8088
+COOKIE_CLOUD_UUID=your-uuid
+COOKIE_CLOUD_PASSWORD=your-password
+# 新版实例如有需要可设置为 aes-128-cbc-fixed，旧版可留空
+COOKIE_CLOUD_CRYPTO_TYPE=
+```
+
+支持自动匹配以下站点的 Cookie：
+
+- `nodeseek.com`
+- `deepflood.com`
+- `v2ex.com`
+- `1point3acres.com`
+
 ## 架构及时序图
 
 <div align="center">
@@ -165,6 +216,9 @@ python -m nodeseek.nodeseek
 python -m deepflood.deepflood
 python -m v2ex.v2ex
 python -m onepoint3acres.onepoint3acres
+
+# 或按目标批量执行
+python run.py
 ```
 
 ## 常见问题
