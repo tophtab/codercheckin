@@ -51,3 +51,49 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Refine Docker Compose deployment flow
+
+**Date**: 2026-04-27
+**Task**: Refine Docker Compose deployment flow
+**Branch**: `main`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Area | Description |
+|------|-------------|
+| README | Reorganized the Cookie Cloud and Docker Compose sections so they sit after sync configuration and before local development, and clarified the Compose-focused deployment narrative. |
+| Compose Deployment | Changed `docker-compose.yml` to pull the published Docker Hub image by default via `CLOUDCHECKIN_IMAGE` instead of building on the NAS/server. |
+| Local Build Override | Added `docker-compose.build.yml` so local developers can explicitly opt into source builds without changing the deployment compose file. |
+| Spec / Env | Updated `.env.localtest.example` and backend code-spec docs to document the new deploy-vs-build split and validation contract. |
+
+**Verification**:
+- `python3 -m py_compile` passed for the Python runner and affected modules.
+- `docker compose config` confirmed the default deployment file now resolves to `image` only, with no `build` section.
+- `docker compose -f docker-compose.yml -f docker-compose.build.yml config` confirmed the build override reintroduces `build` only when explicitly requested.
+- The branch was pushed after both commits: `caf979b` and `90c165f`.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `caf979b` | (see git log) |
+| `90c165f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
