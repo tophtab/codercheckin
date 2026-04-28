@@ -6,11 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# follow the instructions from https://core.telegram.org/bots/features#botfather and get the bot token
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN', '').strip()
-# add the bot to your contact and send a message to it
-# then check the url https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates to get the chat id
-TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '').strip()
+REQUEST_TIMEOUT_SECONDS = 30
 
 def send_tg_notification(message) -> bool:
     """Send Telegram notification
@@ -18,24 +14,28 @@ def send_tg_notification(message) -> bool:
     Args:
         message: The message to send
     """
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+    # Follow https://core.telegram.org/bots/features#botfather to get the bot token.
+    telegram_token = os.environ.get('TELEGRAM_TOKEN', '').strip()
+    telegram_chat_id = os.environ.get('TELEGRAM_CHAT_ID', '').strip()
+
+    if not telegram_token or not telegram_chat_id:
         print("Telegram configuration is incomplete, cannot send notification", flush=True)
         return False
     
     # build the request parameters
     params = urllib.parse.urlencode({
-        'chat_id': TELEGRAM_CHAT_ID,
+        'chat_id': telegram_chat_id,
         'text': message
     })
     
     # create HTTPS connection
-    conn = http.client.HTTPSConnection("api.telegram.org")
+    conn = http.client.HTTPSConnection("api.telegram.org", timeout=REQUEST_TIMEOUT_SECONDS)
     
     try:
         # send GET request
         conn.request(
             "GET", 
-            f"/bot{TELEGRAM_TOKEN}/sendMessage?{params}"
+            f"/bot{telegram_token}/sendMessage?{params}"
         )
         
         # get response

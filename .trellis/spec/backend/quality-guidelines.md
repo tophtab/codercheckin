@@ -34,12 +34,14 @@ unless there is a clear maintenance problem to solve.
 - Load environment variables with `load_dotenv()` in Python modules that are expected to run locally.
 - Validate required configuration before attempting network calls.
 - Keep platform-specific constants, endpoints, and headers close to the code that uses them.
+- Keep platform modules import-safe: cookie lookup and network requests belong in `main()` or injected helpers, not at module import time.
 - Exit with a non-zero code when a scheduled task fails.
 - Reuse existing helpers and data modules before adding new utility code.
 
 Examples:
 
 - Shared Telegram helper reuse in [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:6), [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:7), and [deepflood/deepflood.py](/home/toph/CloudCheckin/deepflood/deepflood.py:7).
+- Shared attendance request reuse in [attendance_checkin.py](/home/toph/CloudCheckin/attendance_checkin.py:1), with platform-specific configuration kept in [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:1) and [deepflood/deepflood.py](/home/toph/CloudCheckin/deepflood/deepflood.py:1).
 - Environment validation in [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:102).
 - Local debug execution commands in [README.md](/home/toph/CloudCheckin/README.md:153).
 
@@ -58,6 +60,7 @@ Examples:
 - Scheduler cron env: `CHECKIN_CRON=0 3 * * *`
 - Deployment image env: `CLOUDCHECKIN_IMAGE=tophtab/cloudcheckin:latest`
 - Shared resolver signature: `get_cookie_value(env_name: str, domains: list[str]) -> str`
+- Shared attendance signature: `run_attendance_checkin(config: AttendanceConfig, *, get_cookie, notify, sleep, randint, post, timeout) -> int`
 - Cookie Cloud endpoint shape: `POST <COOKIE_CLOUD_URL>/get/<COOKIE_CLOUD_UUID>?crypto_type=...`
 - Docker Hub publish workflow: `.github/workflows/dockerhub-publish.yml`
 - Deployment compose file: `docker-compose.yml`
@@ -75,6 +78,8 @@ Examples:
   `COOKIE_CLOUD_URL`, `COOKIE_CLOUD_UUID`, `COOKIE_CLOUD_PASSWORD`, `COOKIE_CLOUD_CRYPTO_TYPE`
 - The shared resolver returns a request-ready cookie header string in `name=value; name2=value2` form.
 - If no direct cookie exists and Cookie Cloud cannot provide a matching domain cookie, the platform script must still fail fast before making network requests.
+- Platform modules must be safe to import in tests: importing `nodeseek.nodeseek`, `deepflood.deepflood`, or `v2ex.v2ex` must not read cookies or call external services.
+- External requests must set a finite timeout so NAS scheduler subprocesses cannot hang indefinitely on one platform.
 - `CHECKIN_CRON` must be a valid 5-field cron expression.
 - `TZ` must be a valid IANA timezone name accepted by `zoneinfo`.
 - Docker Hub publishing uses GitHub repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
@@ -92,6 +97,8 @@ Examples:
 | Cookie Cloud request fails or returns bad JSON | Print a safe error, return empty string, and let the platform entrypoint fail fast |
 | `CHECKIN_TARGETS` contains unsupported names | `run.py` exits non-zero with the supported target list |
 | Platform reports "already checked in" | Treat as a successful, idempotent run instead of failing the batch |
+| Platform JSON returns `success: false` | Treat as a business failure even if HTTP status is `200`, unless the message is an idempotent already-checked-in response |
+| Platform module is imported by tests or tooling | Import succeeds without cookie lookup, sleeps, HTTP requests, or Telegram sends |
 | `CHECKIN_CRON` is invalid | `scheduler.py` exits non-zero before entering the loop |
 | `TZ` is invalid | `scheduler.py` exits non-zero before entering the loop |
 | Server runs `docker compose` with default files | Compose pulls `CLOUDCHECKIN_IMAGE` instead of building locally |
@@ -111,6 +118,8 @@ Examples:
 - Syntax-check the runner, shared resolver, and affected platform modules with `python3 -m py_compile`.
 - Syntax-check the scheduler entrypoint with `python3 -m py_compile scheduler.py`.
 - Validate runner argument handling with an invalid `CHECKIN_TARGETS` value and assert non-zero exit plus a supported-target message.
+- Validate shared attendance behavior with isolated tests for multi-account cookies, request timeout propagation, and business failure responses.
+- Validate platform module imports do not trigger check-in side effects.
 - Validate deployment compose wiring with `docker compose config` after providing a local `.env` file copied from `.env.localtest.example`.
 - Validate local build override wiring with `docker compose -f docker-compose.yml -f docker-compose.build.yml config`.
 - Validate GitHub Actions workflow syntax with `actionlint`.

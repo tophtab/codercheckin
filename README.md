@@ -1,6 +1,9 @@
 # CloudCheckin
 
-面向本地环境和 NAS 的多平台自动签到项目，主路径是：
+面向本地环境和 NAS 的多平台自动签到项目。当前推荐部署方式是
+Docker Compose 常驻运行：容器启动后不会立刻退出，而是按 Cron 表达式定时执行签到。
+
+项目支持三种运行方式：
 
 - Python 直接运行
 - Docker 镜像部署
@@ -14,21 +17,48 @@
 - `Deepflood`：自动签到
 - `V2EX`：自动签到
 
-## 运行方式
+## 推荐部署：NAS / Docker Compose
 
-### 推荐：NAS / Docker Compose 常驻运行
+这个仓库的 [docker-compose.yml](/home/toph/CloudCheckin/docker-compose.yml:1) 用来直接拉取已发布镜像并启动常驻调度容器。默认配置如下：
 
-1. 准备环境变量文件：
+```yaml
+services:
+  cloudcheckin:
+    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CHECKIN_TARGETS: "${CHECKIN_TARGETS:-nodeseek,deepflood,v2ex}"
+      CHECKIN_CRON: "${CHECKIN_CRON:-0 3 * * *}"
+      PYTHONUNBUFFERED: "1"
+      TZ: "${TZ:-Asia/Shanghai}"
+```
+
+含义：
+
+- `image`：默认使用 `tophtab/cloudcheckin:latest`，也可以通过 `.env` 里的 `CLOUDCHECKIN_IMAGE` 覆盖
+- `restart: unless-stopped`：NAS 重启或 Docker 服务重启后自动恢复运行
+- `env_file: .env`：从 `.env` 读取 Cookie、Telegram、Cookie Cloud 等配置
+- `CHECKIN_TARGETS`：控制要执行的平台，默认全部执行
+- `CHECKIN_CRON`：控制定时执行时间，默认每天 `03:00`
+- `TZ`：控制容器内时区，默认 `Asia/Shanghai`
+
+如果 NAS 面板要求文件名必须是 `compose.yaml`，可以把本仓库的 `docker-compose.yml` 内容复制到面板生成的 `compose.yaml`；命令行使用时保留 `docker-compose.yml` 即可。
+
+### 启动步骤
+
+1. 准备 `.env`：
 
 ```bash
 cp .env.localtest.example .env
 ```
 
-2. 编辑 `.env`，至少补充你要启用的平台 Cookie。
+2. 编辑 `.env`，至少补充你要启用的平台 Cookie，或配置 Cookie Cloud。
 
 如果你本身在用 Cookie Cloud，更推荐直接配置 Cookie Cloud，而不是长期手动维护各站点 Cookie。
 
-3. 启动常驻容器：
+3. 启动：
 
 ```bash
 docker compose up -d
@@ -40,7 +70,7 @@ docker compose up -d
 docker compose logs -f cloudcheckin
 ```
 
-默认容器会一直运行，并按照下面的配置定时执行：
+启动后容器会一直运行，日志里会打印下一次执行时间。默认调度配置等价于：
 
 ```env
 TZ=Asia/Shanghai
@@ -56,17 +86,9 @@ CHECKIN_CRON=0 5 * * *
 CHECKIN_CRON=15 7 * * *
 ```
 
-### 使用已发布镜像
+### 更新已发布镜像
 
-默认 `docker-compose.yml` 会直接拉取镜像：
-
-```yaml
-services:
-  cloudcheckin:
-    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
-```
-
-常见操作：
+如果你使用默认的 Docker Hub 镜像，更新时执行：
 
 ```bash
 docker compose pull
@@ -76,7 +98,7 @@ docker compose logs -f cloudcheckin
 
 ### 从当前源码构建镜像
 
-如果你不想直接拉取 Docker Hub 镜像，可以在本地或 NAS 上从源码构建：
+如果你不想拉取 Docker Hub 镜像，可以叠加 [docker-compose.build.yml](/home/toph/CloudCheckin/docker-compose.build.yml:1) 从当前源码构建：
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
@@ -84,7 +106,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 
 ### 手动立即执行一次
 
-常驻容器用于定时跑任务；如果你想立刻手动跑一次：
+常驻容器默认只负责定时执行。如果你想立刻跑一次，不需要等待下一次 Cron：
 
 ```bash
 docker compose run --rm cloudcheckin python run.py
@@ -133,7 +155,7 @@ CHECKIN_CRON=0 3 * * *
 例如只执行部分平台：
 
 ```env
-CHECKIN_TARGETS=nodeseek,deepflood,v2ex
+CHECKIN_TARGETS=nodeseek,v2ex
 ```
 
 ## Cookie Cloud

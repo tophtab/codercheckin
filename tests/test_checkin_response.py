@@ -15,3 +15,9 @@ def test_unrelated_failure_message_is_not_success() -> None:
     response_text = '{"success": false, "message": "USER NOT FOUND"}'
 
     assert not is_successful_checkin_response(500, response_text)
+
+
+def test_200_response_with_explicit_false_success_is_failure() -> None:
+    response_text = '{"success": false, "message": "USER NOT FOUND"}'
+
+    assert not is_successful_checkin_response(200, response_text)

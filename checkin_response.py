@@ -12,18 +12,33 @@ _ALREADY_CHECKED_IN_MESSAGES = (
 
 
 def is_successful_checkin_response(status_code: int, response_text: str) -> bool:
+    payload = _extract_payload(response_text)
+    if isinstance(payload, dict):
+        success = payload.get("success")
+        if isinstance(success, bool):
+            return success or _message_means_already_checked_in(payload, response_text)
+
     if status_code == 200:
         return True
 
-    message = _extract_message(response_text)
+    return _message_means_already_checked_in(payload, response_text)
+
+
+def _message_means_already_checked_in(payload, response_text: str) -> bool:
+    message = _extract_message(payload, response_text)
     normalized = message.lower()
     return any(keyword in normalized for keyword in _ALREADY_CHECKED_IN_MESSAGES)
 
 
-def _extract_message(response_text: str) -> str:
+def _extract_payload(response_text: str):
     try:
-        payload = json.loads(response_text)
+        return json.loads(response_text)
     except ValueError:
+        return None
+
+
+def _extract_message(payload, response_text: str) -> str:
+    if payload is None:
         return response_text
 
     if not isinstance(payload, dict):

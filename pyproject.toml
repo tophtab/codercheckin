@@ -24,6 +24,7 @@ dev = [
 
 [tool.setuptools]
 py-modules = [
+    "attendance_checkin",
     "checkin_response",
     "checkin_runner",
     "run",

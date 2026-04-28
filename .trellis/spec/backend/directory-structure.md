@@ -39,6 +39,7 @@ controller/service/repository, or ORM-based layouts that do not exist here.
 |-- docker-compose.yml
 |-- docker-compose.build.yml
 |-- checkin_runner.py
+|-- attendance_checkin.py
 |-- run.py
 |-- scheduler.py
 |-- requirements.txt
@@ -55,15 +56,19 @@ Each platform gets its own top-level package.
 - Put platform-specific request headers, endpoint URLs, parsing logic, and message formatting inside that platform package.
 - Put shared notification behavior in [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1) rather than re-implementing Telegram calls in each platform module.
 - Put cross-platform integrations in a small top-level helper package when multiple platform scripts need the same behavior, as in [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:1).
+- Put shared platform execution behavior in small top-level helpers when two or more platform modules genuinely use the same flow, as in [attendance_checkin.py](/home/toph/CloudCheckin/attendance_checkin.py:1) for NodeSeek and DeepFlood attendance requests.
 
 For Python scripts, the package module is both library code and CLI entrypoint.
-The usual pattern is helper functions or a small class at module scope, then an
-`if __name__ == "__main__":` block that validates environment variables and
-executes the workflow.
+The usual pattern is helper functions or configuration at module scope, a
+`main() -> int` function that validates environment variables and executes the
+workflow, then an `if __name__ == "__main__":` block that converts exceptions
+into process exit codes. Importing a platform module should not perform cookie
+lookup or external network work.
 
 Examples:
 
-- [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:27) defines helpers first and executes the flow in the `__main__` block.
+- [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:1) defines helpers first and executes the flow from `main()`.
+- [attendance_checkin.py](/home/toph/CloudCheckin/attendance_checkin.py:1) holds the shared attendance flow used by platform modules whose behavior only differs by endpoint, domains, and labels.
 - [run.py](/home/toph/CloudCheckin/run.py:1) is the one-shot batch entrypoint and shells out to existing module entrypoints instead of re-implementing their flows.
 - [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1) is the long-running Docker/NAS scheduler entrypoint that triggers batch runs from `CHECKIN_CRON`.
 - [checkin_runner.py](/home/toph/CloudCheckin/checkin_runner.py:1) holds the shared target parsing and subprocess execution logic used by both entrypoints.
@@ -96,7 +101,7 @@ Examples:
 - Do not introduce a fake `src/` or web-service layering model unless the repository architecture actually changes.
 - Do not place secrets or local cookies in tracked files. This project expects secrets from environment variables only.
 - Do not duplicate the Telegram HTTP client in each platform script when [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1) already exists.
-- Do not make the Docker batch runner import platform modules directly just to execute them. Some modules validate configuration at import time, so the runner should execute their CLI entrypoints as subprocesses.
+- Do not make the Docker batch runner import platform modules directly just to execute them. Platform modules should be import-safe, but the runner should still execute their CLI entrypoints as subprocesses so local `python -m ...` behavior matches Docker/NAS behavior.
 - Do not fold scheduler behavior into `run.py` if that would blur the difference between one-shot execution and long-running container orchestration.
 
 ---
@@ -104,6 +109,7 @@ Examples:
 ## Examples
 
 - Platform package with module entrypoint: [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:1)
+- Shared attendance helper: [attendance_checkin.py](/home/toph/CloudCheckin/attendance_checkin.py:1)
 - Shared notification helper: [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1)
 - One-shot batch entrypoint: [run.py](/home/toph/CloudCheckin/run.py:1)
 - Long-running scheduler entrypoint: [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1)

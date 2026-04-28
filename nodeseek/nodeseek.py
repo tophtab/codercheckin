@@ -1,72 +1,34 @@
 import sys
-import os
-from curl_cffi import requests
-import random
-import time
+
 from dotenv import load_dotenv
-from checkin_response import is_successful_checkin_response
+
+from attendance_checkin import AttendanceConfig, run_attendance_checkin
 from cookiecloud.client import get_cookie_value
 from telegram.notify import send_tg_notification
 
-load_dotenv()
 
-# Get COOKIE from environment variable, multiple cookies separated by &
-cookies = get_cookie_value(
-    'NODESEEK_COOKIE',
-    ['nodeseek.com', 'www.nodeseek.com'],
+CONFIG = AttendanceConfig(
+    name="NODESEEK",
+    env_name="NODESEEK_COOKIE",
+    domains=["nodeseek.com", "www.nodeseek.com"],
+    origin="https://www.nodeseek.com",
+    referer="https://www.nodeseek.com/board",
+    attendance_url="https://www.nodeseek.com/api/attendance?random=true",
 )
 
-if not cookies:
-    raise ValueError(
-        "Environment variable NODESEEK_COOKIE is not set and Cookie Cloud has no matching cookie"
+
+def main() -> int:
+    load_dotenv()
+    return run_attendance_checkin(
+        CONFIG,
+        get_cookie=get_cookie_value,
+        notify=send_tg_notification,
     )
-    sys.exit(1)
 
-# Split multiple cookies by & to form a list
-cookie_list = cookies.split('&')
 
-# Request headers
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0',
-    'Origin': 'https://www.nodeseek.com',
-    'Referer': 'https://www.nodeseek.com/board',
-    'Content-Type': 'application/json',
-}
-
-# Iterate over multiple account cookies for check-in
-for idx, cookie in enumerate(cookie_list):
-
-    print(f"Using the {idx+1} account for check-in...", flush=True)
-    # Generate a random delay
-    random_delay = random.randint(1, 20)
-    print(f"The {idx+1} account will wait for {random_delay} seconds...", flush=True)
-    time.sleep(random_delay)
-
-    # Add cookie to headers
-    headers['Cookie'] = cookie.strip()
-    
+if __name__ == "__main__":
     try:
-        # random=true means get a random bonus
-        url = 'https://www.nodeseek.com/api/attendance?random=true'
-        response = requests.post(url, headers=headers, impersonate="chrome136")
-        
-        # Output the status code and response content
-        print(f"The {idx+1} account's Status Code: {response.status_code}", flush=True)
-        print(f"The {idx+1} account's Response Content: {response.text}", flush=True)
-        
-        # Check if the check-in is successful based on the response content
-        if is_successful_checkin_response(response.status_code, response.text):
-            success_message = f"NODESEEK account {idx+1} check-in successful"
-            print(success_message, flush=True)
-            send_tg_notification(success_message)
-        else:
-            fail_message = f"NODESEEK account {idx+1} check-in failed, response content: {response.text}"
-            print(fail_message, flush=True)
-            send_tg_notification(fail_message)
-            sys.exit(1)
-    
-    except Exception as e:
-        error_message = f"NODESEEK account {idx+1} check-in process error: {e}"
-        print(error_message, flush=True)
-        send_tg_notification(error_message)
+        sys.exit(main())
+    except Exception as err:
+        print(err, flush=True)
         sys.exit(1)
