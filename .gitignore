@@ -1,4 +1,8 @@
+__pycache__/
 */__pycache__
+*.egg-info/
+.venv/
+.venv-*/
 node_modules/
 .env
 .trellis/.developer

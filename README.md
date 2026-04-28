@@ -171,7 +171,9 @@ DEEPFLOOD_COOKIE=
 ## 本地 Python 运行
 
 ```bash
-pip install -r requirements.txt
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e .[dev]
 cp .env.localtest.example .env
 python run.py
 ```
@@ -182,6 +184,24 @@ python run.py
 python -m nodeseek.nodeseek
 python -m deepflood.deepflood
 python -m v2ex.v2ex
+```
+
+## 测试
+
+仓库现在已经补上了 Python 项目配置和最小测试入口：
+
+- [pyproject.toml](/home/toph/CloudCheckin/pyproject.toml:1)
+- [pytest.ini](/home/toph/CloudCheckin/pytest.ini:1)
+- [tests/test_checkin_response.py](/home/toph/CloudCheckin/tests/test_checkin_response.py:1)
+- [tests/test_checkin_runner.py](/home/toph/CloudCheckin/tests/test_checkin_runner.py:1)
+
+本地运行测试：
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e .[dev]
+pytest
 ```
 
 ## 发布 Docker 镜像

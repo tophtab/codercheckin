@@ -171,18 +171,23 @@ run_targets(targets)
 
 ## Testing Requirements
 
-There is no automated test suite in the repository today.
-That is current reality and the documentation should reflect it honestly.
+The repository now has a minimal `pytest` entrypoint configured through:
+
+- [pyproject.toml](/home/toph/CloudCheckin/pyproject.toml:1)
+- [pytest.ini](/home/toph/CloudCheckin/pytest.ini:1)
+- [tests/test_checkin_response.py](/home/toph/CloudCheckin/tests/test_checkin_response.py:1)
+- [tests/test_checkin_runner.py](/home/toph/CloudCheckin/tests/test_checkin_runner.py:1)
 
 Minimum verification for backend changes:
 
-- Run the affected module locally with `python -m ...` when possible.
+- Run `python3 -m compileall` on affected modules when touching script entrypoints.
+- Run `pytest` for shared helpers and parsing utilities that have isolated tests.
 - Confirm required environment variables are documented or preserved.
 - For parsing changes, verify against a real response sample or the live platform when safe.
 - For scheduler or deployment changes, verify with `docker compose config` and a targeted local container run when possible.
 
-If you add a non-trivial parsing helper, retry policy, or shared utility, prefer to
-add isolated tests rather than expanding the current manual-only model further.
+When you add shared utilities or cross-platform response handling, prefer to extend
+the `tests/` suite instead of leaving the behavior manual-only.
 
 ---
 
