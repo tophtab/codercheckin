@@ -144,3 +144,50 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Refactor attendance check-in flow
+
+**Date**: 2026-04-28
+**Task**: Refactor attendance check-in flow
+**Branch**: `main`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Area | Summary |
+|------|---------|
+| README | Rewrote Docker Compose/NAS deployment guidance and clarified compose.yaml usage. |
+| Shared check-in flow | Added attendance_checkin.py to share NodeSeek and DeepFlood multi-account attendance execution. |
+| Platform entrypoints | Converted NodeSeek, DeepFlood, and V2EX modules to import-safe main() entrypoints. |
+| Reliability | Added finite request timeouts for attendance, V2EX, and Telegram calls; fixed 200 + success:false response handling. |
+| Tests | Added attendance flow tests, platform import side-effect tests, and expanded response parsing coverage. |
+| Specs | Updated backend directory and quality guidelines for shared attendance helpers and import-safe modules. |
+
+**Validation**:
+- `. .venv/bin/activate && pytest` -> 12 passed
+- `python -m compileall ...` -> passed
+- `docker compose config` -> passed
+- `docker compose -f docker-compose.yml -f docker-compose.build.yml config` -> passed
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4117c84` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
