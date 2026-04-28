@@ -97,3 +97,50 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: NAS Docker scheduler refactor
+
+**Date**: 2026-04-28
+**Task**: NAS Docker scheduler refactor
+**Branch**: `main`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Area | Description |
+|------|-------------|
+| Deployment | Reworked the project around local/NAS Docker deployment with a long-running scheduler container and Docker image publishing as the distribution path. |
+| Cleanup | Removed CircleCI, Cloudflare Worker, English README, and onepoint3acres / 2Captcha support from the codebase and docs. |
+| Runtime | Added `scheduler.py`, `checkin_runner.py`, shared check-in response handling, and kept `run.py` as the one-shot entrypoint. |
+| Docs | Rewrote the Chinese README around Cookie Cloud, Docker Compose, local Python usage, and V2EX cookie quoting guidance. |
+| Verification | Verified `docker compose config`, local source builds, Cookie Cloud resolution, and real check-in runs for Nodeseek, V2EX, and Deepflood. |
+| Tooling | Added `pyproject.toml`, `pytest.ini`, and a minimal `tests/` suite for shared helper behavior. |
+
+**Notable outcomes**:
+- Default scheduler config is `TZ=Asia/Shanghai` with `CHECKIN_CRON=0 3 * * *`.
+- "Already checked in" responses are treated as idempotent success paths.
+- Cookie Cloud is now the recommended cookie source; local `.env` remains untracked.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c84e4a3` | (see git log) |
+| `989a629` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
