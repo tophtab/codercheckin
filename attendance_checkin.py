@@ -6,10 +6,7 @@ from typing import Callable
 from curl_cffi import requests
 
 from checkin_response import is_successful_checkin_response
-
-
-DEFAULT_TIMEOUT_SECONDS = 30
-DEFAULT_DELAY_RANGE_SECONDS = (1, 20)
+from config import DEFAULT_DELAY_RANGE_SECONDS, DEFAULT_USER_AGENT, REQUEST_TIMEOUT_SECONDS
 
 
 @dataclass(frozen=True)
@@ -30,7 +27,7 @@ def run_attendance_checkin(
     sleep: Callable[[float], None] = time.sleep,
     randint: Callable[[int, int], int] = random.randint,
     post: Callable = requests.post,
-    timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    timeout: int = REQUEST_TIMEOUT_SECONDS,
 ) -> int:
     cookies = get_cookie(config.env_name, config.domains)
     if not cookies:
@@ -83,8 +80,7 @@ def run_attendance_checkin(
 
 def _build_headers(config: AttendanceConfig, cookie: str) -> dict[str, str]:
     return {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+        "User-Agent": DEFAULT_USER_AGENT,
         "Origin": config.origin,
         "Referer": config.referer,
         "Content-Type": "application/json",

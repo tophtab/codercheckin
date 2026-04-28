@@ -8,6 +8,8 @@ from urllib.parse import urlencode, urlparse
 import requests
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
+from config import REQUEST_TIMEOUT_SECONDS
+
 
 _COOKIE_CLOUD_CACHE = None
 
@@ -96,9 +98,9 @@ def _fetch_cookiecloud_payload():
 def _request_cookiecloud_payload(method: str, endpoint: str, json_body: dict | None = None):
     try:
         if method == "get":
-            response = requests.get(endpoint, timeout=20)
+            response = requests.get(endpoint, timeout=REQUEST_TIMEOUT_SECONDS)
         else:
-            response = requests.post(endpoint, json=json_body, timeout=20)
+            response = requests.post(endpoint, json=json_body, timeout=REQUEST_TIMEOUT_SECONDS)
         response.raise_for_status()
         payload = response.json()
     except requests.RequestException as exc:

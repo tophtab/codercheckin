@@ -27,6 +27,7 @@ py-modules = [
     "attendance_checkin",
     "checkin_response",
     "checkin_runner",
+    "config",
     "run",
     "scheduler",
 ]

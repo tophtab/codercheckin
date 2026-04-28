@@ -5,11 +5,9 @@ from datetime import datetime
 from curl_cffi import requests
 from dotenv import load_dotenv
 
+from config import REQUEST_TIMEOUT_SECONDS
 from cookiecloud.client import get_cookie_value
 from telegram.notify import send_tg_notification
-
-
-REQUEST_TIMEOUT_SECONDS = 30
 
 
 def build_headers(cookie: str) -> dict[str, str]:
@@ -34,10 +32,13 @@ def build_headers(cookie: str) -> dict[str, str]:
     }
 
 
+def _fetch_page(url: str, headers: dict[str, str]) -> str:
+    response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+    return response.text
+
+
 def get_once(headers: dict[str, str], message: str) -> tuple[str | None, bool, str]:
-    url = "https://www.v2ex.com/mission/daily"
-    res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
-    content = res.text
+    content = _fetch_page("https://www.v2ex.com/mission/daily", headers)
 
     if re.search(r"需要先登录", content):
         return None, False, message + "The cookie is overdated."
@@ -47,16 +48,13 @@ def get_once(headers: dict[str, str], message: str) -> tuple[str | None, bool, s
 
     once_match = re.search(r"redeem\?once=(.*?)'", content)
     if once_match:
-        once = once_match.group(1)
-        return once, False, message + f"Successfully get once {once}\n"
+        return once_match.group(1), False, message + f"Successfully get once {once_match.group(1)}\n"
 
     return None, False, message + "Have not signed, but fail to get once\n"
 
 
 def check_in(once: str, headers: dict[str, str], message: str) -> tuple[bool, str]:
-    url = f"https://www.v2ex.com/mission/daily/redeem?once={once}"
-    res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
-    content = res.text
+    content = _fetch_page(f"https://www.v2ex.com/mission/daily/redeem?once={once}", headers)
 
     if re.search(r"已成功领取每日登录奖励", content):
         return True, message + "Check in successfully\n"
@@ -65,9 +63,7 @@ def check_in(once: str, headers: dict[str, str], message: str) -> tuple[bool, st
 
 
 def balance(headers: dict[str, str]) -> tuple[str | None, str | None]:
-    url = "https://www.v2ex.com/balance"
-    res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
-    content = res.text
+    content = _fetch_page("https://www.v2ex.com/balance", headers)
     pattern = r'每日登录奖励.*?<small class="gray">(.*?)</small>.*?<td class="d" style="text-align: right;">.*?</td>.*?<td class="d" style="text-align: right;">(.*?)</td>'
     match = re.search(pattern, content, re.DOTALL)
 
@@ -79,10 +75,7 @@ def balance(headers: dict[str, str]) -> tuple[str | None, str | None]:
 
 def main() -> int:
     load_dotenv()
-    cookie = get_cookie_value(
-        "V2EX_COOKIE",
-        ["v2ex.com", "www.v2ex.com"],
-    )
+    cookie = get_cookie_value("V2EX_COOKIE", ["v2ex.com", "www.v2ex.com"])
     if not cookie:
         raise ValueError(
             "Environment variable V2EX_COOKIE is not set and Cookie Cloud has no matching cookie"
@@ -90,27 +83,28 @@ def main() -> int:
 
     message = datetime.now().astimezone().strftime("%Y/%m/%d %H:%M:%S") + " from V2EX \n"
     headers = build_headers(cookie)
-
     once, signed, message = get_once(headers, message)
-
-    if once and not signed:
-        success, message = check_in(once, headers, message)
-        if not success:
-            raise ValueError("Fail to check in")
-        balance_time, balance_value = balance(headers)
-        if not balance_time or not balance_value:
-            raise ValueError("Fail to get balance")
-        send_tg_notification(message)
-        return 0
 
     if signed:
         print("V2EX already checked in today", flush=True)
         send_tg_notification(message)
         return 0
 
-    message += "FAIL.\n"
+    if not once:
+        send_tg_notification(message + "FAIL.\n")
+        raise ValueError("Fail to check in")
+
+    success, message = check_in(once, headers, message)
+    if not success:
+        send_tg_notification(message)
+        raise ValueError("Fail to check in")
+
+    balance_time, balance_value = balance(headers)
+    if not balance_time or not balance_value:
+        raise ValueError("Fail to get balance")
+
     send_tg_notification(message)
-    raise ValueError("Fail to check in")
+    return 0
 
 
 if __name__ == "__main__":

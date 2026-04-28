@@ -1,206 +1,178 @@
-# CloudCheckin
+# CloudCheckin - 多平台自动签到工具
 
-面向本地环境和 NAS 的多平台自动签到项目。当前推荐部署方式是
-Docker Compose 常驻运行：容器启动后不会立刻退出，而是按 Cron 表达式定时执行签到。
+一个专为 NAS 和本地环境设计的自动签到工具，支持 Docker 部署，开箱即用。
 
-项目支持三种运行方式：
+## 为什么选择 CloudCheckin？
 
-- Python 直接运行
-- Docker 镜像部署
-- Docker Compose 常驻调度
-
-容器默认使用 `Asia/Shanghai` 时区，并在凌晨 `03:00` 执行每日签到。这个默认值落在 `00:00-08:00` 区间内，适合 NAS 长期后台运行。
+- 🚀 **开箱即用**：Docker Compose 一键部署，无需复杂配置
+- 🔄 **自动运行**：容器常驻后台，按时自动签到，无需手动干预
+- 🍪 **Cookie Cloud 集成**：支持从 Cookie Cloud 自动同步 Cookie，告别手动维护
+- 📱 **Telegram 通知**：签到结果实时推送，随时掌握状态
+- 🔐 **多账号支持**：单个平台可配置多个账号同时签到
+- 🌏 **时区友好**：默认使用 `Asia/Shanghai` 时区，可自定义
 
 ## 支持平台
 
-- `Nodeseek`：自动签到
-- `Deepflood`：自动签到
-- `V2EX`：自动签到
+| 平台 | 多账号 | Cookie Cloud |
+|------|--------|--------------|
+| Nodeseek | ✅ | ✅ |
+| Deepflood | ✅ | ✅ |
+| V2EX | ❌ | ✅ |
 
-## 推荐部署：NAS / Docker Compose
+## 快速开始
 
-这个仓库的 [docker-compose.yml](/home/toph/CloudCheckin/docker-compose.yml:1) 用来直接拉取已发布镜像并启动常驻调度容器。默认配置如下：
-
-```yaml
-services:
-  cloudcheckin:
-    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      CHECKIN_TARGETS: "${CHECKIN_TARGETS:-nodeseek,deepflood,v2ex}"
-      CHECKIN_CRON: "${CHECKIN_CRON:-0 3 * * *}"
-      PYTHONUNBUFFERED: "1"
-      TZ: "${TZ:-Asia/Shanghai}"
-```
-
-含义：
-
-- `image`：默认使用 `tophtab/cloudcheckin:latest`，也可以通过 `.env` 里的 `CLOUDCHECKIN_IMAGE` 覆盖
-- `restart: unless-stopped`：NAS 重启或 Docker 服务重启后自动恢复运行
-- `env_file: .env`：从 `.env` 读取 Cookie、Telegram、Cookie Cloud 等配置
-- `CHECKIN_TARGETS`：控制要执行的平台，默认全部执行
-- `CHECKIN_CRON`：控制定时执行时间，默认每天 `03:00`
-- `TZ`：控制容器内时区，默认 `Asia/Shanghai`
-
-如果 NAS 面板要求文件名必须是 `compose.yaml`，可以把本仓库的 `docker-compose.yml` 内容复制到面板生成的 `compose.yaml`；命令行使用时保留 `docker-compose.yml` 即可。
-
-### 启动步骤
-
-1. 准备 `.env`：
+### 1. 准备配置文件
 
 ```bash
+# 克隆或下载本仓库
+git clone https://github.com/tophtab/CloudCheckin.git
+cd CloudCheckin
+
+# 复制配置模板
 cp .env.localtest.example .env
 ```
 
-2. 编辑 `.env`，至少补充你要启用的平台 Cookie，或配置 Cookie Cloud。
+### 2. 编辑 `.env` 文件
 
-如果你本身在用 Cookie Cloud，更推荐直接配置 Cookie Cloud，而不是长期手动维护各站点 Cookie。
+**方式一：使用 Cookie Cloud（推荐）**
 
-3. 启动：
-
-```bash
-docker compose up -d
-```
-
-4. 查看日志：
-
-```bash
-docker compose logs -f cloudcheckin
-```
-
-启动后容器会一直运行，日志里会打印下一次执行时间。默认调度配置等价于：
-
-```env
-TZ=Asia/Shanghai
-CHECKIN_CRON=0 3 * * *
-CHECKIN_TARGETS=nodeseek,deepflood,v2ex
-```
-
-如果你想修改执行时间，直接调整 `CHECKIN_CRON` 即可。建议仍然放在凌晨 `00:00-08:00` 区间，例如：
-
-```env
-CHECKIN_CRON=30 2 * * *
-CHECKIN_CRON=0 5 * * *
-CHECKIN_CRON=15 7 * * *
-```
-
-### 更新已发布镜像
-
-如果你使用默认的 Docker Hub 镜像，更新时执行：
-
-```bash
-docker compose pull
-docker compose up -d
-docker compose logs -f cloudcheckin
-```
-
-### 从当前源码构建镜像
-
-如果你不想拉取 Docker Hub 镜像，可以叠加 [docker-compose.build.yml](/home/toph/CloudCheckin/docker-compose.build.yml:1) 从当前源码构建：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-```
-
-### 手动立即执行一次
-
-常驻容器默认只负责定时执行。如果你想立刻跑一次，不需要等待下一次 Cron：
-
-```bash
-docker compose run --rm cloudcheckin python run.py
-```
-
-## 环境变量
-
-### 平台 Cookie
-
-```env
-V2EX_COOKIE=
-NODESEEK_COOKIE=
-DEEPFLOOD_COOKIE=
-```
-
-说明：
-
-- `NODESEEK_COOKIE` 和 `DEEPFLOOD_COOKIE` 支持多账号，使用 `&` 分隔
-- 如果手动填写 `V2EX_COOKIE`，建议写成 `V2EX_COOKIE='原始 cookie'`，避免 `.env` 里的 `$` 被 `docker compose` 当成变量插值
-- 如果对应平台的直接 Cookie 留空，程序会继续尝试从 Cookie Cloud 自动匹配
-
-### Telegram 通知
-
-```env
-TELEGRAM_TOKEN=
-TELEGRAM_CHAT_ID=
-```
-
-如果未配置 Telegram，签到逻辑仍会执行，但不会发送通知。
-
-### 调度与镜像
-
-```env
-CLOUDCHECKIN_IMAGE=tophtab/cloudcheckin:latest
-CHECKIN_TARGETS=nodeseek,deepflood,v2ex
-TZ=Asia/Shanghai
-CHECKIN_CRON=0 3 * * *
-```
-
-说明：
-
-- `CHECKIN_TARGETS` 用逗号分隔，可只跑部分平台
-- `TZ` 控制容器内调度时区
-- `CHECKIN_CRON` 使用标准 5 段 Cron 表达式
-
-例如只执行部分平台：
-
-```env
-CHECKIN_TARGETS=nodeseek,v2ex
-```
-
-## Cookie Cloud
-
-这是当前更推荐的方案。你只维护 Cookie Cloud，仓库侧尽量少放平台专属 Cookie。
-
-如果不想手动维护各平台 Cookie，可以启用 [Cookie Cloud](https://github.com/easychen/CookieCloud)：
+如果你已经在使用 [Cookie Cloud](https://github.com/easychen/CookieCloud)，只需配置：
 
 ```env
 COOKIE_CLOUD_URL=http://your-cookiecloud-host:8088
 COOKIE_CLOUD_UUID=your-uuid
 COOKIE_CLOUD_PASSWORD=your-password
-COOKIE_CLOUD_CRYPTO_TYPE=
 ```
 
-读取优先级如下：
+程序会自动从 Cookie Cloud 获取所需平台的 Cookie，无需手动维护。
 
-1. 先读取平台专属环境变量
-2. 对应环境变量为空时，再尝试从 Cookie Cloud 自动匹配
+**方式二：手动配置 Cookie**
 
-如果你偏好完全交给 Cookie Cloud，可以把下面这些平台变量都留空：
+如果不使用 Cookie Cloud，可以手动填写各平台 Cookie：
 
 ```env
-V2EX_COOKIE=
-NODESEEK_COOKIE=
-DEEPFLOOD_COOKIE=
+# 单账号
+NODESEEK_COOKIE=your_cookie_here
+
+# 多账号（使用 & 分隔）
+NODESEEK_COOKIE=account1_cookie&account2_cookie&account3_cookie
+
+# V2EX（注意：如果 Cookie 包含 $ 符号，需要用单引号包裹）
+V2EX_COOKIE='your_v2ex_cookie_here'
 ```
 
-当前支持自动匹配以下站点：
+**可选：配置 Telegram 通知**
 
-- `nodeseek.com`
-- `deepflood.com`
-- `v2ex.com`
+```env
+TELEGRAM_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+```
 
-## 本地 Python 运行
+### 3. 启动容器
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -e .[dev]
-cp .env.localtest.example .env
-python run.py
+docker compose up -d
 ```
 
-如果只想单独调试某个平台，也可以直接执行：
+### 4. 查看日志
+
+```bash
+docker compose logs -f cloudcheckin
+```
+
+你会看到类似输出：
+
+```
+Scheduler started with TZ=Asia/Shanghai, CHECKIN_CRON=0 3 * * *, CHECKIN_TARGETS=nodeseek,deepflood,v2ex
+Next run scheduled at 2026-04-29T03:00:00+08:00
+```
+
+容器会在每天凌晨 3 点自动执行签到。
+
+## 进阶配置
+
+### 自定义执行时间
+
+编辑 `.env` 文件，修改 `CHECKIN_CRON`：
+
+```env
+# 每天凌晨 2:30 执行
+CHECKIN_CRON=30 2 * * *
+
+# 每天早上 8:00 执行
+CHECKIN_CRON=0 8 * * *
+
+# 每天凌晨 5:15 执行
+CHECKIN_CRON=15 5 * * *
+```
+
+修改后重启容器：
+
+```bash
+docker compose restart
+```
+
+### 只签到部分平台
+
+```env
+# 只签到 Nodeseek 和 V2EX
+CHECKIN_TARGETS=nodeseek,v2ex
+
+# 只签到 Deepflood
+CHECKIN_TARGETS=deepflood
+```
+
+### 自定义时区
+
+```env
+# 使用美国东部时间
+TZ=America/New_York
+
+# 使用日本时间
+TZ=Asia/Tokyo
+```
+
+### 手动立即执行一次
+
+不想等到定时任务？可以立即执行一次：
+
+```bash
+docker compose run --rm cloudcheckin python run.py
+```
+
+## 更新镜像
+
+当有新版本发布时：
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+## 本地开发
+
+如果你想修改代码或本地调试：
+
+```bash
+# 创建虚拟环境
+python3 -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# 安装依赖
+pip install -e .[dev]
+
+# 配置环境变量
+cp .env.localtest.example .env
+# 编辑 .env 填入你的配置
+
+# 运行签到
+python run.py
+
+# 运行测试
+pytest
+```
+
+### 单独测试某个平台
 
 ```bash
 python -m nodeseek.nodeseek
@@ -208,50 +180,99 @@ python -m deepflood.deepflood
 python -m v2ex.v2ex
 ```
 
-## 测试
+## 常见问题
 
-仓库现在已经补上了 Python 项目配置和最小测试入口：
+### Q: 如何获取平台的 Cookie？
 
-- [pyproject.toml](/home/toph/CloudCheckin/pyproject.toml:1)
-- [pytest.ini](/home/toph/CloudCheckin/pytest.ini:1)
-- [tests/test_checkin_response.py](/home/toph/CloudCheckin/tests/test_checkin_response.py:1)
-- [tests/test_checkin_runner.py](/home/toph/CloudCheckin/tests/test_checkin_runner.py:1)
+1. 在浏览器登录对应平台
+2. 按 F12 打开开发者工具
+3. 切换到 Network（网络）标签
+4. 刷新页面，找到任意请求
+5. 在请求头中找到 `Cookie` 字段，复制完整内容
 
-本地运行测试：
+### Q: Cookie 失效了怎么办？
+
+**使用 Cookie Cloud：** Cookie Cloud 会自动同步最新 Cookie，无需手动更新
+
+**手动配置：** 更新 `.env` 文件中的 Cookie，然后重启容器：
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -e .[dev]
-pytest
+docker compose restart
 ```
 
-## 发布 Docker 镜像
+### Q: 为什么没有收到 Telegram 通知？
 
-仓库保留了 GitHub Actions 的 Docker 镜像发布工作流：`.github/workflows/dockerhub-publish.yml`。
+1. 检查 `TELEGRAM_TOKEN` 和 `TELEGRAM_CHAT_ID` 是否正确
+2. 确认 Bot 已经添加到对应的聊天中
+3. 查看容器日志是否有错误信息
 
-需要的配置：
+### Q: 如何在群晖 NAS 上部署？
 
-- `DOCKERHUB_USERNAME`：Docker Hub 用户名
-- `DOCKERHUB_TOKEN`：Docker Hub Access Token
-- 可选 `DOCKERHUB_IMAGE`：自定义镜像名，未配置时默认发布到 `<DOCKERHUB_USERNAME>/cloudcheckin`
+1. 打开 Container Manager（原 Docker 套件）
+2. 在项目中新建项目
+3. 将本仓库的 `docker-compose.yml` 内容复制到 `compose.yaml`
+4. 上传 `.env` 文件或在界面中配置环境变量
+5. 启动项目
 
-触发方式：
+### Q: 支持添加新平台吗？
 
-- push 到 `main`
-- push `v*` tag
-- 手动执行 `workflow_dispatch`
+当然！项目采用模块化设计，添加新平台很简单。参考 `nodeseek/nodeseek.py` 或 `deepflood/deepflood.py` 的实现即可。
 
-## 目录说明
+## 环境变量完整列表
 
-- [run.py](/home/toph/CloudCheckin/run.py:1)：单次执行入口
-- [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1)：容器常驻调度入口
-- [checkin_runner.py](/home/toph/CloudCheckin/checkin_runner.py:1)：平台批量执行器
-- [docker-compose.yml](/home/toph/CloudCheckin/docker-compose.yml:1)：常驻调度部署
-- [docker-compose.build.yml](/home/toph/CloudCheckin/docker-compose.build.yml:1)：本地构建镜像覆盖配置
+| 变量名 | 说明 | 默认值 | 必填 |
+|--------|------|--------|------|
+| `CHECKIN_TARGETS` | 要执行的平台（逗号分隔） | `nodeseek,deepflood,v2ex` | 否 |
+| `CHECKIN_CRON` | Cron 表达式 | `0 3 * * *` | 否 |
+| `TZ` | 时区 | `Asia/Shanghai` | 否 |
+| `NODESEEK_COOKIE` | Nodeseek Cookie（支持多账号，用 `&` 分隔） | - | 条件 |
+| `DEEPFLOOD_COOKIE` | Deepflood Cookie（支持多账号，用 `&` 分隔） | - | 条件 |
+| `V2EX_COOKIE` | V2EX Cookie | - | 条件 |
+| `COOKIE_CLOUD_URL` | Cookie Cloud 服务地址 | - | 条件 |
+| `COOKIE_CLOUD_UUID` | Cookie Cloud UUID | - | 条件 |
+| `COOKIE_CLOUD_PASSWORD` | Cookie Cloud 密码 | - | 条件 |
+| `COOKIE_CLOUD_CRYPTO_TYPE` | Cookie Cloud 加密类型 | - | 否 |
+| `TELEGRAM_TOKEN` | Telegram Bot Token | - | 否 |
+| `TELEGRAM_CHAT_ID` | Telegram Chat ID | - | 否 |
 
-## 说明
+**注意：** 
+- 每个平台的 Cookie 可以通过直接配置或 Cookie Cloud 提供，至少需要一种方式
+- Telegram 配置为可选，不配置也不影响签到功能
 
-- 这个项目已经不再维护 CircleCI、Cloudflare Worker 等旧部署方案
-- 当前推荐部署模型就是本地 / NAS + Docker Compose 常驻运行
-- 如果某个平台 Cookie 失效，更新 `.env` 后重启容器即可
+## 项目结构
+
+```
+CloudCheckin/
+├── run.py                    # 单次执行入口
+├── scheduler.py              # 定时调度入口（容器使用）
+├── checkin_runner.py         # 平台批量执行器
+├── attendance_checkin.py     # 通用签到流程
+├── checkin_response.py       # 响应解析器
+├── cookiecloud/              # Cookie Cloud 客户端
+├── telegram/                 # Telegram 通知模块
+├── nodeseek/                 # Nodeseek 平台实现
+├── deepflood/                # Deepflood 平台实现
+├── v2ex/                     # V2EX 平台实现
+├── docker-compose.yml        # Docker Compose 配置
+└── .env.localtest.example    # 环境变量模板
+```
+
+## 技术栈
+
+- Python 3.11+
+- Docker & Docker Compose
+- curl_cffi（模拟浏览器请求）
+- croniter（Cron 表达式解析）
+- cryptography（Cookie Cloud 解密）
+
+## 许可证
+
+MIT License
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+**提示：** 建议将签到时间设置在凌晨 0:00-8:00 之间，避免与平台高峰期冲突。
