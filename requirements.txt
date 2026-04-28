@@ -1,4 +1,6 @@
 requests
-2captcha-python
 curl_cffi
 python-dotenv
+cryptography
+croniter
+tzdata

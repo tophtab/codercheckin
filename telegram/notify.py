@@ -1,8 +1,7 @@
 import http.client
-import urllib.parse
 import json
 import os
-import sys
+import urllib.parse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,7 +12,7 @@ TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN', '').strip()
 # then check the url https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates to get the chat id
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '').strip()
 
-def send_tg_notification(message):
+def send_tg_notification(message) -> bool:
     """Send Telegram notification
     
     Args:
@@ -21,7 +20,7 @@ def send_tg_notification(message):
     """
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("Telegram configuration is incomplete, cannot send notification", flush=True)
-        sys.exit(1)
+        return False
     
     # build the request parameters
     params = urllib.parse.urlencode({
@@ -49,13 +48,14 @@ def send_tg_notification(message):
         # handle response
         if response.status == 200 and result.get('ok'):
             print("Notification sent successfully", flush=True)
+            return True
         else:
             print(f"Notification sent failed: {response.status} - {data}", flush=True)
-            raise Exception(f"Notification sent failed: {response.status} - {data}")
+            return False
             
     except Exception as e:
         print(f"Notification sending process error: {str(e)}", flush=True)
-        sys.exit(1)
+        return False
     finally:
         # ensure connection is closed
         conn.close()

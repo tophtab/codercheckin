@@ -10,9 +10,9 @@ Error handling in this repository is simple and operational.
 Most scripts are daily automation jobs, so the primary goal is:
 
 - fail fast when required configuration is missing
-- print enough detail to understand the failure in CI logs
+- print enough detail to understand the failure in local or container logs
 - send a Telegram notification when the script can still do so
-- exit with a non-zero status so CI marks the run as failed
+- exit with a non-zero status so one-shot runs and scheduled subprocesses mark the run as failed
 
 This project does not use a shared exception hierarchy across all modules.
 Most modules rely on built-in exceptions, return booleans for operation status,
@@ -24,9 +24,9 @@ or define small local exception types for narrow integrations.
 
 Current patterns in the repository:
 
-- Use `ValueError` for missing required environment variables in executable scripts, as in [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:102) and [onepoint3acres/onepoint3acres.py](/home/toph/CloudCheckin/onepoint3acres/onepoint3acres.py:182).
+- Use `ValueError` for missing required environment variables in executable scripts, as in [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:102) and [run.py](/home/toph/CloudCheckin/run.py:8).
 - Use broad `except Exception as e` blocks at script boundaries to guarantee log output and process failure, as in [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:54).
-- Define small custom exception types only when wrapping a third-party API, as in `NetworkException` and `ApiException` in [onepoint3acres/two-captcha/api.py](/home/toph/CloudCheckin/onepoint3acres/two-captcha/api.py:6).
+- Use broad `except Exception as e` blocks at script boundaries to guarantee log output and process failure, as in [deepflood/deepflood.py](/home/toph/CloudCheckin/deepflood/deepflood.py:54).
 
 There is no project-wide custom base exception today.
 
@@ -42,7 +42,7 @@ status `1`.
 Examples:
 
 - [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:100)
-- [onepoint3acres/onepoint3acres.py](/home/toph/CloudCheckin/onepoint3acres/onepoint3acres.py:178)
+- [run.py](/home/toph/CloudCheckin/run.py:6)
 
 ### Helper Functions
 
@@ -54,31 +54,22 @@ Inside helpers, the codebase currently mixes two styles:
 Examples:
 
 - [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:27) returns `(once, signed)` instead of raising for every bad page state.
-- [onepoint3acres/onepoint3acres.py](/home/toph/CloudCheckin/onepoint3acres/onepoint3acres.py:109) returns `None, None` when the question cannot be resolved.
-- [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:22) exits the process when notification configuration is invalid because the helper is treated as terminal infrastructure.
+- [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1) returns `False` when notification configuration is invalid or delivery fails, letting the main job decide whether the overall run should fail.
 
-### Worker Code
+### Scheduler Boundary
 
-Cloudflare Worker code should catch errors and convert them into HTTP responses
-with explicit `success` or `error` fields.
+The long-running scheduler should validate its own cron/timezone configuration
+up front, print the failure, and exit with status `1` if startup cannot proceed.
 
 Example:
 
-- [cloudflareworkers/src/v2ex.js](/home/toph/CloudCheckin/cloudflareworkers/src/v2ex.js:109) returns a JSON error response with HTTP `500` when the Worker-side flow fails.
+- [scheduler.py](/home/toph/CloudCheckin/scheduler.py:14) raises `ValueError` for invalid `TZ` or `CHECKIN_CRON` configuration and converts that into process failure in the `__main__` block.
 
 ---
 
 ## API Error Responses
 
 There is no shared Python API server in this repository.
-
-For Worker endpoints, use JSON responses with an explicit success/failure shape.
-Current examples include:
-
-- success payloads such as `{ success: true, message: ... }`
-- failure payloads such as `{ success: false, error: ..., message: ... }`
-
-Reference: [cloudflareworkers/src/v2ex.js](/home/toph/CloudCheckin/cloudflareworkers/src/v2ex.js:115)
 
 ---
 
@@ -88,12 +79,13 @@ Reference: [cloudflareworkers/src/v2ex.js](/home/toph/CloudCheckin/cloudflarewor
 - Preserve enough context in error messages to identify which platform and which step failed.
 - Use `sys.exit(1)` in Python job entrypoints when the automation cannot complete successfully.
 - Send Telegram notifications for failures when notification configuration is already available.
+- Keep scheduler startup validation separate from per-platform failure handling.
 
 ---
 
 ## Common Mistakes
 
-- Do not swallow exceptions and continue silently. CI must fail when a platform job fails.
+- Do not swallow exceptions and continue silently. The process or scheduled subprocess must fail when a platform job fails.
 - Do not raise without first recording enough information in stdout or a Telegram message.
-- Do not assume notification sending is harmless; [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:22) can itself terminate the process if configuration is incomplete.
+- Do not assume notification sending is harmless; callers should handle the `False` return from [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1) when notification delivery matters.
 - Do not mix success and failure states in the same return value without a clear convention. If a helper returns `None` or `False`, the caller must check it immediately.

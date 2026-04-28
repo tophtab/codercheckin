@@ -1,10 +1,11 @@
 services:
   cloudcheckin:
     image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
+    restart: unless-stopped
     env_file:
       - .env
     environment:
-      CHECKIN_TARGETS: ${CHECKIN_TARGETS:-nodeseek,deepflood,v2ex,onepoint3acres}
+      CHECKIN_TARGETS: "${CHECKIN_TARGETS:-nodeseek,deepflood,v2ex}"
+      CHECKIN_CRON: "${CHECKIN_CRON:-0 3 * * *}"
       PYTHONUNBUFFERED: "1"
-    command: ["python", "run.py"]
-
+      TZ: "${TZ:-Asia/Shanghai}"

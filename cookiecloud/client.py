@@ -1,7 +1,12 @@
+import base64
+import binascii
+import hashlib
+import json
 import os
 from urllib.parse import urlencode, urlparse
 
 import requests
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
 _COOKIE_CLOUD_CACHE = None
@@ -67,12 +72,37 @@ def _fetch_cookiecloud_payload():
 
     endpoint = f"{url}/get/{uuid}{query}"
 
+    payload = _request_cookiecloud_payload("get", endpoint)
+    if payload:
+        normalized = _normalize_cookiecloud_payload(payload, uuid, password)
+        if normalized:
+            _COOKIE_CLOUD_CACHE = normalized
+            return normalized
+
+    post_payload = _request_cookiecloud_payload(
+        "post",
+        endpoint,
+        json_body={"password": password},
+    )
+
+    normalized = _normalize_cookiecloud_payload(post_payload, uuid, password)
+    if not normalized:
+        return None
+
+    _COOKIE_CLOUD_CACHE = normalized
+    return normalized
+
+
+def _request_cookiecloud_payload(method: str, endpoint: str, json_body: dict | None = None):
     try:
-        response = requests.post(endpoint, json={"password": password}, timeout=20)
+        if method == "get":
+            response = requests.get(endpoint, timeout=20)
+        else:
+            response = requests.post(endpoint, json=json_body, timeout=20)
         response.raise_for_status()
         payload = response.json()
     except requests.RequestException as exc:
-        print(f"Cookie Cloud request failed: {exc}", flush=True)
+        print(f"Cookie Cloud {method.upper()} request failed: {exc}", flush=True)
         return None
     except ValueError as exc:
         print(f"Cookie Cloud returned invalid JSON: {exc}", flush=True)
@@ -82,8 +112,88 @@ def _fetch_cookiecloud_payload():
         print("Cookie Cloud payload is not a JSON object", flush=True)
         return None
 
-    _COOKIE_CLOUD_CACHE = payload
     return payload
+
+
+def _normalize_cookiecloud_payload(payload: dict | None, uuid: str, password: str):
+    if not payload:
+        return None
+
+    cookie_data = payload.get("cookie_data")
+    if isinstance(cookie_data, dict):
+        return payload
+
+    encrypted = str(payload.get("encrypted", "")).strip()
+    if not encrypted:
+        print("Cookie Cloud payload does not contain cookie_data", flush=True)
+        return None
+
+    decrypted = _decrypt_cookiecloud_payload(uuid, password, encrypted)
+    if not decrypted:
+        return None
+
+    if not isinstance(decrypted.get("cookie_data"), dict):
+        print("Cookie Cloud decrypted payload does not contain cookie_data", flush=True)
+        return None
+
+    print("Cookie Cloud payload decrypted client-side", flush=True)
+    return decrypted
+
+
+def _decrypt_cookiecloud_payload(uuid: str, password: str, encrypted: str):
+    try:
+        raw_encrypted = base64.b64decode(encrypted)
+    except (ValueError, binascii.Error) as exc:
+        print(f"Cookie Cloud encrypted payload is not valid base64: {exc}", flush=True)
+        return None
+
+    if len(raw_encrypted) < 16 or raw_encrypted[:8] != b"Salted__":
+        print("Cookie Cloud encrypted payload has invalid OpenSSL header", flush=True)
+        return None
+
+    salt = raw_encrypted[8:16]
+    ciphertext = raw_encrypted[16:]
+    passphrase = hashlib.md5(f"{uuid}-{password}".encode("utf-8")).hexdigest()[:16].encode(
+        "utf-8"
+    )
+    key, iv = _bytes_to_key(salt, passphrase, 32, 16)
+
+    try:
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+        decryptor = cipher.decryptor()
+        decrypted = decryptor.update(ciphertext) + decryptor.finalize()
+        unpadded = _pkcs7_unpad(decrypted)
+        payload = json.loads(unpadded.decode("utf-8"))
+    except Exception as exc:
+        print(f"Cookie Cloud client-side decryption failed: {exc}", flush=True)
+        return None
+
+    if not isinstance(payload, dict):
+        print("Cookie Cloud decrypted payload is not a JSON object", flush=True)
+        return None
+
+    return payload
+
+
+def _bytes_to_key(salt: bytes, data: bytes, key_len: int, iv_len: int) -> tuple[bytes, bytes]:
+    derived = b""
+    digest = b""
+    while len(derived) < key_len + iv_len:
+        digest = hashlib.md5(digest + data + salt).digest()
+        derived += digest
+    return derived[:key_len], derived[key_len : key_len + iv_len]
+
+
+def _pkcs7_unpad(data: bytes) -> bytes:
+    if not data:
+        raise ValueError("empty decrypted payload")
+
+    pad_len = data[-1]
+    if pad_len < 1 or pad_len > 16:
+        raise ValueError("invalid padding length")
+    if data[-pad_len:] != bytes([pad_len]) * pad_len:
+        raise ValueError("invalid PKCS7 padding")
+    return data[:-pad_len]
 
 
 def _find_matching_hosts(cookie_data: dict, domains: list[str]) -> list[str]:
@@ -110,4 +220,3 @@ def _normalize_domain(value: str) -> str:
     parsed = urlparse(value if "://" in value else f"//{value}")
     host = parsed.netloc or parsed.path
     return host.split(":", 1)[0].lstrip(".").lower()
-

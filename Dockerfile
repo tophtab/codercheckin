@@ -12,5 +12,4 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
-CMD ["python", "run.py"]
-
+CMD ["python", "scheduler.py"]

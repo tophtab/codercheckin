@@ -24,7 +24,7 @@ Examples of the current pattern:
 
 - [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:21) keeps state in process memory only.
 - [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:9) reads cookies from environment variables and immediately performs remote requests.
-- [onepoint3acres/questions.py](/home/toph/CloudCheckin/onepoint3acres/questions.py:1) stores static answer data in source control instead of a database.
+- [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:1) keeps Cookie Cloud payload handling in process memory instead of introducing local persistence.
 
 ---
 
@@ -33,7 +33,7 @@ Examples of the current pattern:
 - Runtime secrets live in environment variables.
 - Static platform metadata may live in Python modules or documentation.
 - Remote platforms remain the source of truth for check-in state and balances.
-- Cloudflare and CircleCI provide orchestration, not durable application storage.
+- Docker Compose and the long-running scheduler provide orchestration, not durable application storage.
 
 If you need to remember state between runs, first ask whether the remote platform
 already exposes enough information to avoid local persistence.
@@ -53,8 +53,8 @@ Instead, backend modules follow these patterns:
 Examples:
 
 - [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:31) parses the daily mission page with regular expressions.
-- [onepoint3acres/onepoint3acres.py](/home/toph/CloudCheckin/onepoint3acres/onepoint3acres.py:65) fetches question data and reads the JSON payload directly.
-- [cloudflareworkers/src/v2ex.js](/home/toph/CloudCheckin/cloudflareworkers/src/v2ex.js:133) fetches remote pages inside the Worker and extracts response data with string checks and regex.
+- [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:57) fetches remote JSON and derives control flow directly from the payload.
+- [scheduler.py](/home/toph/CloudCheckin/scheduler.py:39) coordinates when the existing platform modules run, but does not introduce any persistent storage.
 
 ---
 
@@ -81,7 +81,7 @@ Because there is no schema, naming conventions focus on configuration keys.
 
 - Use explicit environment variable names in `UPPER_SNAKE_CASE`.
 - Prefer platform-prefixed names such as `V2EX_COOKIE` and `DEEPFLOOD_COOKIE`.
-- Keep third-party service configuration explicit, for example `TWOCAPTCHA_APIKEY`, `TELEGRAM_TOKEN`, and `TELEGRAM_CHAT_ID`.
+- Keep third-party service configuration explicit, for example `TELEGRAM_TOKEN` and `TELEGRAM_CHAT_ID`.
 
 ---
 

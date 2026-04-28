@@ -4,6 +4,7 @@ from curl_cffi import requests
 import random
 import time
 from dotenv import load_dotenv
+from checkin_response import is_successful_checkin_response
 from cookiecloud.client import get_cookie_value
 from telegram.notify import send_tg_notification
 
@@ -54,7 +55,7 @@ for idx, cookie in enumerate(cookie_list):
         print(f"The {idx+1} account's Response Content: {response.text}", flush=True)
         
         # Check if the check-in is successful based on the response content
-        if response.status_code == 200:
+        if is_successful_checkin_response(response.status_code, response.text):
             success_message = f"DEEPFLOOD account {idx+1} check-in successful"
             print(success_message, flush=True)
             send_tg_notification(success_message)

@@ -128,6 +128,9 @@ if __name__ == "__main__":
             time, balance = balance()
             if not time or not balance:
                 raise ValueError("Fail to get balance")
+        elif signed:
+            print("V2EX already checked in today", flush=True)
+            send_tg_notification(message)
         else:
             message += "FAIL.\n"
             send_tg_notification(message)
