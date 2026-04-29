@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 5
-- **Last Active**: 2026-04-28
+- **Total Sessions**: 6
+- **Last Active**: 2026-04-29
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~226 | Active |
+| `journal-1.md` | ~260 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 6 | 2026-04-29 | Improve scheduler runtime logging and failure reporting | `142f12c`, `6236dc6` | `main` |
 | 5 | 2026-04-28 | Code architecture optimization | `0f5f04d` | `main` |
 | 4 | 2026-04-28 | Refactor attendance check-in flow | `4117c84` | `main` |
 | 3 | 2026-04-28 | NAS Docker scheduler refactor | `c84e4a3`, `989a629` | `main` |

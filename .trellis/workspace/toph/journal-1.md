@@ -224,3 +224,37 @@ Created config.py for unified configuration, simplified code structure, improved
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: Improve scheduler runtime logging and failure reporting
+
+**Date**: 2026-04-29
+**Task**: Improve scheduler runtime logging and failure reporting
+**Branch**: `main`
+
+### Summary
+
+Updated scheduler and runner logging for readable runtime status, moved default cron to 03:30 Asia/Shanghai, raised target failures with recent stdout/stderr context, added regression tests, synced backend specs, and archived the completed runtime-status-schedule task.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `142f12c` | (see git log) |
+| `6236dc6` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
