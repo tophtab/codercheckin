@@ -6,6 +6,6 @@ services:
       - .env
     environment:
       CHECKIN_TARGETS: "${CHECKIN_TARGETS:-nodeseek,deepflood,v2ex}"
-      CHECKIN_CRON: "${CHECKIN_CRON:-0 3 * * *}"
+      CHECKIN_CRON: "${CHECKIN_CRON:-30 3 * * *}"
       PYTHONUNBUFFERED: "1"
       TZ: "${TZ:-Asia/Shanghai}"

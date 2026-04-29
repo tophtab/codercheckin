@@ -56,8 +56,9 @@ Examples:
 - One-shot batch entrypoint command: `python run.py`
 - Long-running scheduler entrypoint command: `python scheduler.py`
 - Batch target selector env: `CHECKIN_TARGETS=nodeseek,deepflood,v2ex`
+- Batch target runner signature: `run_targets(targets: list[str]) -> int`
 - Scheduler timezone env: `TZ=Asia/Shanghai`
-- Scheduler cron env: `CHECKIN_CRON=0 3 * * *`
+- Scheduler cron env: `CHECKIN_CRON=30 3 * * *`
 - Deployment image env: `CLOUDCHECKIN_IMAGE=tophtab/cloudcheckin:latest`
 - Shared resolver signature: `get_cookie_value(env_name: str, domains: list[str]) -> str`
 - Shared attendance signature: `run_attendance_checkin(config: AttendanceConfig, *, get_cookie, notify, sleep, randint, post, timeout) -> int`
@@ -82,6 +83,16 @@ Examples:
 - External requests must set a finite timeout so NAS scheduler subprocesses cannot hang indefinitely on one platform.
 - `CHECKIN_CRON` must be a valid 5-field cron expression.
 - `TZ` must be a valid IANA timezone name accepted by `zoneinfo`.
+- `run_targets()` must execute configured targets in order, print each target's
+  start and success/failure result, stop at the first non-zero subprocess exit,
+  and raise an exception that names the failing target and includes a bounded
+  recent stdout/stderr summary.
+- `run_targets()` must also wrap subprocess start failures with the failing
+  target/module context and a bounded recent output summary, then stop before
+  later targets run.
+- `run_targets()` must forward target subprocess stdout/stderr while the target
+  runs and, on failure, print a bounded recent stdout/stderr summary without
+  introducing new secret sources beyond the subprocess output itself.
 - Docker Hub publishing uses GitHub repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
 - Optional GitHub repository variable `DOCKERHUB_IMAGE` overrides the default image name.
 - If `DOCKERHUB_IMAGE` is empty, the workflow publishes to `<DOCKERHUB_USERNAME>/cloudcheckin`.
@@ -96,6 +107,8 @@ Examples:
 | Direct platform cookie missing, Cookie Cloud not configured | Return empty string and let the platform entrypoint raise `ValueError` |
 | Cookie Cloud request fails or returns bad JSON | Print a safe error, return empty string, and let the platform entrypoint fail fast |
 | `CHECKIN_TARGETS` contains unsupported names | `run.py` exits non-zero with the supported target list |
+| A check-in target subprocess exits non-zero | `run_targets()` logs the target failure, raises an exception with the failing target and recent stdout/stderr text, and does not run later targets |
+| A check-in target subprocess cannot start | `run_targets()` raises a target-specific exception that preserves the module/startup error text and does not run later targets |
 | Platform reports "already checked in" | Treat as a successful, idempotent run instead of failing the batch |
 | Platform JSON returns `success: false` | Treat as a business failure even if HTTP status is `200`, unless the message is an idempotent already-checked-in response |
 | Platform module is imported by tests or tooling | Import succeeds without cookie lookup, sleeps, HTTP requests, or Telegram sends |
@@ -111,13 +124,19 @@ Examples:
 - Good: `V2EX_COOKIE` is set explicitly, so [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:11) uses it without any Cookie Cloud dependency.
 - Base: `NODESEEK_COOKIE` is empty, Cookie Cloud is configured, and [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:20) builds the cookie header from the matched domain payload.
 - Bad: `V2EX_COOKIE` is empty and Cookie Cloud has no matching `v2ex.com` cookie, so [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:102) raises before the sign-in flow starts.
-- Good: [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1) starts with `TZ=Asia/Shanghai` and `CHECKIN_CRON=0 3 * * *`, logs the next run, and then delegates to [checkin_runner.py](/home/toph/CloudCheckin/checkin_runner.py:1).
+- Good: [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1) starts with `TZ=Asia/Shanghai` and `CHECKIN_CRON=30 3 * * *`, logs the next run, and then delegates to [checkin_runner.py](/home/toph/CloudCheckin/checkin_runner.py:1).
 
 ### 6. Tests Required
 
 - Syntax-check the runner, shared resolver, and affected platform modules with `python3 -m py_compile`.
 - Syntax-check the scheduler entrypoint with `python3 -m py_compile scheduler.py`.
 - Validate runner argument handling with an invalid `CHECKIN_TARGETS` value and assert non-zero exit plus a supported-target message.
+- Validate runner target logs by stubbing subprocess execution and asserting
+  per-target start, success, failure, and first-failure stop behavior.
+- Validate failed runner subprocesses still forward stdout/stderr and include a
+  recent failure-output summary.
+- Validate subprocess start failures are wrapped with the failing target/module
+  context and stop later targets.
 - Validate shared attendance behavior with isolated tests for multi-account cookies, request timeout propagation, and business failure responses.
 - Validate platform module imports do not trigger check-in side effects.
 - Validate deployment compose wiring with `docker compose config` after providing a local `.env` file copied from `.env.localtest.example`.

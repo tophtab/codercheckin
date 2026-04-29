@@ -1,16 +1,18 @@
 import os
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from croniter import croniter
 
-from checkin_runner import parse_targets, run_targets
+from checkin_runner import TargetExecutionError, parse_targets, run_targets
 
 
-DEFAULT_CRON = "0 3 * * *"
+DEFAULT_CRON = "30 3 * * *"
 DEFAULT_TIMEZONE = "Asia/Shanghai"
+WAIT_STATUS_INTERVAL_SECONDS = 60 * 60
 
 
 def load_schedule_config() -> tuple[str, str, ZoneInfo]:
@@ -32,20 +34,78 @@ def get_next_run(now: datetime, cron_expression: str) -> datetime:
     return croniter(cron_expression, now).get_next(datetime)
 
 
-def sleep_until(target_time: datetime) -> None:
+def format_timestamp(value: datetime) -> str:
+    zone_name = getattr(value.tzinfo, "key", None) or value.tzname()
+    offset = value.utcoffset()
+
+    if offset is None:
+        return value.strftime("%Y-%m-%d %H:%M:%S")
+
+    total_minutes = int(offset.total_seconds() // 60)
+    sign = "+" if total_minutes >= 0 else "-"
+    total_minutes = abs(total_minutes)
+    offset_hours, offset_minutes = divmod(total_minutes, 60)
+    offset_text = f"UTC{sign}{offset_hours:02d}:{offset_minutes:02d}"
+    timestamp = value.strftime("%Y-%m-%d %H:%M:%S")
+
+    if zone_name:
+        return f"{timestamp} {zone_name} ({offset_text})"
+    return f"{timestamp} ({offset_text})"
+
+
+def format_duration(seconds: float) -> str:
+    remaining_seconds = max(0, int(seconds))
+    hours, remaining_seconds = divmod(remaining_seconds, 60 * 60)
+    minutes, remaining_seconds = divmod(remaining_seconds, 60)
+
+    parts: list[str] = []
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    if remaining_seconds or not parts:
+        parts.append(f"{remaining_seconds}s")
+    return " ".join(parts)
+
+
+def sleep_until(
+    target_time: datetime,
+    *,
+    sleep: Callable[[float], None] = time.sleep,
+    now: Callable[[], datetime] | None = None,
+    status_log_interval_seconds: int = WAIT_STATUS_INTERVAL_SECONDS,
+) -> None:
+    now_factory = now or (lambda: datetime.now(target_time.tzinfo))
+    last_status_log: datetime | None = None
+
     while True:
-        seconds_remaining = (target_time - datetime.now(target_time.tzinfo)).total_seconds()
+        current_time = now_factory()
+        seconds_remaining = (target_time - current_time).total_seconds()
         if seconds_remaining <= 0:
             return
-        time.sleep(min(seconds_remaining, 60))
+
+        should_log_status = last_status_log is None or (
+            current_time - last_status_log
+        ).total_seconds() >= status_log_interval_seconds
+        if should_log_status:
+            print(
+                "Waiting for next run at "
+                f"{format_timestamp(target_time)} "
+                f"({format_duration(seconds_remaining)} remaining)",
+                flush=True,
+            )
+            last_status_log = current_time
+
+        sleep(min(seconds_remaining, 60))
 
 
 def main() -> int:
     cron_expression, timezone_name, timezone = load_schedule_config()
     targets = parse_targets()
+    scheduler_started_at = datetime.now(timezone)
 
     print(
-        "Scheduler started with "
+        f"Scheduler started at {format_timestamp(scheduler_started_at)} with "
         f"TZ={timezone_name}, CHECKIN_CRON={cron_expression}, "
         f"CHECKIN_TARGETS={','.join(targets)}",
         flush=True,
@@ -54,22 +114,29 @@ def main() -> int:
     while True:
         now = datetime.now(timezone)
         next_run = get_next_run(now, cron_expression)
-        print(f"Next run scheduled at {next_run.isoformat()}", flush=True)
+        print(f"Next run scheduled at {format_timestamp(next_run)}", flush=True)
         sleep_until(next_run)
 
         started_at = datetime.now(timezone)
-        print(f"Starting scheduled check-in at {started_at.isoformat()}", flush=True)
-        exit_code = run_targets(targets)
-        finished_at = datetime.now(timezone)
-
-        if exit_code == 0:
-            print(f"Scheduled check-in finished at {finished_at.isoformat()}", flush=True)
-            continue
-
         print(
-            f"Scheduled check-in failed with exit code {exit_code} at {finished_at.isoformat()}",
+            f"Starting scheduled check-in at {format_timestamp(started_at)}",
             flush=True,
         )
+        try:
+            run_targets(targets)
+        except TargetExecutionError:
+            finished_at = datetime.now(timezone)
+            print(
+                f"Scheduled check-in failed at {format_timestamp(finished_at)}",
+                flush=True,
+            )
+            raise
+        finished_at = datetime.now(timezone)
+        print(
+            f"Scheduled check-in finished at {format_timestamp(finished_at)}",
+            flush=True,
+        )
+        continue
 
 
 if __name__ == "__main__":

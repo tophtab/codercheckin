@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Scheduler, Docker, and tests must preserve backend automation quality contracts."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "The task changes scheduler log visibility in container logs."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Scheduler startup and subprocess failure behavior must remain explicit and non-silent."}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "The task modifies cron constants and requires searching all matching defaults."}

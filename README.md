@@ -83,11 +83,15 @@ docker compose logs -f cloudcheckin
 你会看到类似输出：
 
 ```
-Scheduler started with TZ=Asia/Shanghai, CHECKIN_CRON=0 3 * * *, CHECKIN_TARGETS=nodeseek,deepflood,v2ex
-Next run scheduled at 2026-04-29T03:00:00+08:00
+Scheduler started at 2026-04-28 21:17:30 Asia/Shanghai (UTC+08:00) with TZ=Asia/Shanghai, CHECKIN_CRON=30 3 * * *, CHECKIN_TARGETS=nodeseek,deepflood,v2ex
+Next run scheduled at 2026-04-29 03:30:00 Asia/Shanghai (UTC+08:00)
+Waiting for next run at 2026-04-29 03:30:00 Asia/Shanghai (UTC+08:00) (6h 12m 30s remaining)
+Starting scheduled check-in at 2026-04-29 03:30:00 Asia/Shanghai (UTC+08:00)
+Starting check-in target 'v2ex' (v2ex.v2ex)
+Check-in target 'v2ex' succeeded
 ```
 
-容器会在每天凌晨 3 点自动执行签到。
+容器会在每天凌晨 3:30 自动执行签到，并在等待期间定期输出剩余时间。每个平台会输出明确的开始、成功或失败状态；如果平台子进程失败，日志还会附带最近的 stdout/stderr 片段，便于看到实际错误和失败步骤。
 
 ## 进阶配置
 
@@ -223,7 +227,7 @@ docker compose restart
 | 变量名 | 说明 | 默认值 | 必填 |
 |--------|------|--------|------|
 | `CHECKIN_TARGETS` | 要执行的平台（逗号分隔） | `nodeseek,deepflood,v2ex` | 否 |
-| `CHECKIN_CRON` | Cron 表达式 | `0 3 * * *` | 否 |
+| `CHECKIN_CRON` | Cron 表达式 | `30 3 * * *` | 否 |
 | `TZ` | 时区 | `Asia/Shanghai` | 否 |
 | `NODESEEK_COOKIE` | Nodeseek Cookie（支持多账号，用 `&` 分隔） | - | 条件 |
 | `DEEPFLOOD_COOKIE` | Deepflood Cookie（支持多账号，用 `&` 分隔） | - | 条件 |

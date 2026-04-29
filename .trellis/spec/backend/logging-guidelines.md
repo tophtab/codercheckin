@@ -32,6 +32,14 @@ Examples:
 - Scheduler progress logs in [scheduler.py](/home/toph/CloudCheckin/scheduler.py:41) record the cron configuration, next run, and run boundaries.
 - Error logs in [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1) and platform scripts print explicit failure messages.
 
+### Scheduler Wait Visibility
+
+Long-running scheduler sleeps must not be silent for the whole wait window.
+After logging the next scheduled execution time, `scheduler.py` should also emit
+periodic wait-status logs with the target timestamp and remaining duration. This
+prevents Docker/NAS operators from mistaking a healthy wait state for a stalled
+container when the next cron run is many hours away.
+
 ---
 
 ## Structured Logging
@@ -53,11 +61,16 @@ container logs unless there is a clear operational need for more structure.
 ## What To Log
 
 - Start and end of a platform check-in flow.
+- In the batch runner, start and success/failure for each configured target
+  before moving to the next target or returning a failure code.
+- When a batch runner target subprocess fails, include a bounded recent
+  stdout/stderr tail so container logs show the failed step and error string.
 - Which account is being processed when a script supports multiple cookies.
 - External HTTP status codes and short response details when a request fails.
 - Parsing failures, missing environment variables, or third-party captcha issues.
 - Final success or failure messages that explain the outcome.
 - Scheduler startup configuration and next scheduled execution time.
+- Periodic scheduler wait status when the next execution is still in the future.
 
 Examples:
 
