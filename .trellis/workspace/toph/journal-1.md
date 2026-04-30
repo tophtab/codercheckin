@@ -258,3 +258,38 @@ Updated scheduler and runner logging for readable runtime status, moved default 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 7: Cookie Cloud runtime verification
+
+**Date**: 2026-04-30
+**Task**: Cookie Cloud runtime verification
+**Branch**: `main`
+
+### Summary
+
+Verified Cookie Cloud credentials via a manual check-in run, confirmed updated scheduler logs in the container, and ran the test suite with 21 passing tests.
+
+### Main Changes
+
+- Ran a manual check-in with Cookie Cloud credentials injected via environment variables.
+- Confirmed Nodeseek, V2EX, and DeepFlood all resolved cookies from Cookie Cloud.
+- Confirmed the updated container now emits the newer scheduler log format and is waiting for the next cron run.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a3ad020` | (see git log) |
+
+### Testing
+
+- [OK] `python3 -m pytest` passed with 21 tests.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
