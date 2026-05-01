@@ -293,3 +293,36 @@ Verified Cookie Cloud credentials via a manual check-in run, confirmed updated s
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: Archive Trellis migration task
+
+**Date**: 2026-05-01
+**Task**: Archive Trellis migration task
+**Branch**: `main`
+
+### Summary
+
+Archived the completed Trellis v0.5.0-beta.17 migration task after confirming the repository had no active current task and a clean worktree.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d370c89` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

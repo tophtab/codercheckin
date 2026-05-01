@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
-- **Last Active**: 2026-04-30
+- **Total Sessions**: 8
+- **Last Active**: 2026-05-01
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~293 | Active |
+| `journal-1.md` | ~328 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-05-01 | Archive Trellis migration task | `d370c89` | `main` |
 | 7 | 2026-04-30 | Cookie Cloud runtime verification | `a3ad020` | `main` |
 | 6 | 2026-04-29 | Improve scheduler runtime logging and failure reporting | `142f12c`, `6236dc6` | `main` |
 | 5 | 2026-04-28 | Code architecture optimization | `0f5f04d` | `main` |
