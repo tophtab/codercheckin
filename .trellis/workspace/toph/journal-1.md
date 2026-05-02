@@ -326,3 +326,37 @@ Archived the completed Trellis v0.5.0-beta.17 migration task after confirming th
 ### Next Steps
 
 - None - task complete
+
+
+## Session 9: Startup cookie validation
+
+**Date**: 2026-05-02
+**Task**: Startup cookie validation
+**Branch**: `main`
+
+### Summary
+
+Added Docker scheduler startup validation for direct cookies and Cookie Cloud matches, documented the behavior, updated backend specs, and archived the Trellis task.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e4a44fe` | (see git log) |
+| `1062e1c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
