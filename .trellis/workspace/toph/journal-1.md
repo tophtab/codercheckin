@@ -360,3 +360,36 @@ Added Docker scheduler startup validation for direct cookies and Cookie Cloud ma
 ### Next Steps
 
 - None - task complete
+
+
+## Session 10: Optimize README deployment guide
+
+**Date**: 2026-05-02
+**Task**: Optimize README deployment guide
+**Branch**: `main`
+
+### Summary
+
+Streamlined README around copy-ready Docker Compose deployment instructions, concise env examples, and minimal maintenance commands.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bbf299b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
