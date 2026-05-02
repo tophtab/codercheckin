@@ -70,8 +70,10 @@ def test_main_propagates_target_failure(monkeypatch, capsys) -> None:
         lambda: ("30 3 * * *", "Asia/Shanghai", timezone),
     )
     monkeypatch.setattr(scheduler, "parse_targets", lambda: ["v2ex"])
+    monkeypatch.setattr(scheduler, "validate_target_cookies", lambda targets: None)
     monkeypatch.setattr(scheduler, "get_next_run", lambda now, cron: next_run)
     monkeypatch.setattr(scheduler, "sleep_until", sleep_calls.append)
+
     def fail_run_targets(targets: list[str]) -> int:
         raise TargetExecutionError(
             target="v2ex",
@@ -89,3 +91,31 @@ def test_main_propagates_target_failure(monkeypatch, capsys) -> None:
     output = capsys.readouterr().out
     assert "Next run scheduled at 2026-04-29 03:30:00 Asia/Shanghai (UTC+08:00)" in output
     assert "Scheduled check-in failed at " in output
+
+
+def test_main_validates_target_cookies_before_waiting(monkeypatch) -> None:
+    timezone = ZoneInfo("Asia/Shanghai")
+    calls = []
+
+    monkeypatch.setattr(
+        scheduler,
+        "load_schedule_config",
+        lambda: ("30 3 * * *", "Asia/Shanghai", timezone),
+    )
+    monkeypatch.setattr(scheduler, "parse_targets", lambda: ["nodeseek"])
+
+    def fail_validation(targets: list[str]) -> None:
+        calls.append(("validate", targets))
+        raise ValueError("startup validation failed")
+
+    monkeypatch.setattr(scheduler, "validate_target_cookies", fail_validation)
+    monkeypatch.setattr(
+        scheduler,
+        "sleep_until",
+        lambda target_time: calls.append(("sleep", target_time)),
+    )
+
+    with pytest.raises(ValueError, match="startup validation failed"):
+        scheduler.main()
+
+    assert calls == [("validate", ["nodeseek"])]

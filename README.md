@@ -83,6 +83,11 @@ docker compose logs -f cloudcheckin
 你会看到类似输出：
 
 ```
+Validating startup cookie configuration...
+Startup validation: target 'nodeseek' has cookie from Cookie Cloud
+Startup validation: target 'deepflood' has cookie from Cookie Cloud
+Startup validation: target 'v2ex' has cookie from environment
+Startup cookie validation completed
 Scheduler started at 2026-04-28 21:17:30 Asia/Shanghai (UTC+08:00) with TZ=Asia/Shanghai, CHECKIN_CRON=30 3 * * *, CHECKIN_TARGETS=nodeseek,deepflood,v2ex
 Next run scheduled at 2026-04-29 03:30:00 Asia/Shanghai (UTC+08:00)
 Waiting for next run at 2026-04-29 03:30:00 Asia/Shanghai (UTC+08:00) (6h 12m 30s remaining)
@@ -91,7 +96,7 @@ Starting check-in target 'v2ex' (v2ex.v2ex)
 Check-in target 'v2ex' succeeded
 ```
 
-容器会在每天凌晨 3:30 自动执行签到，并在等待期间定期输出剩余时间。每个平台会输出明确的开始、成功或失败状态；如果平台子进程失败，日志还会附带最近的 stdout/stderr 片段，便于看到实际错误和失败步骤。
+容器启动时会先检查当前 `CHECKIN_TARGETS` 对应的平台是否能获取到 Cookie：直接填写的 Cookie 会优先使用；如果没有直接 Cookie，会尝试从 Cookie Cloud 获取匹配域名的 Cookie。校验失败时容器会直接退出，并在日志里标出缺少 Cookie 的平台。容器会在每天凌晨 3:30 自动执行签到，并在等待期间定期输出剩余时间。每个平台会输出明确的开始、成功或失败状态；如果平台子进程失败，日志还会附带最近的 stdout/stderr 片段，便于看到实际错误和失败步骤。
 
 ## 进阶配置
 
@@ -241,6 +246,7 @@ docker compose restart
 
 **注意：** 
 - 每个平台的 Cookie 可以通过直接配置或 Cookie Cloud 提供，至少需要一种方式
+- Docker 启动时会检查启用平台的 Cookie 来源是否可用；该检查不会打印完整 Cookie、Token 或 Cookie Cloud 密码
 - Telegram 配置为可选，不配置也不影响签到功能
 
 ## 项目结构

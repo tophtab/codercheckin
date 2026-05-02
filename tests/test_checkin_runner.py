@@ -9,6 +9,7 @@ from checkin_runner import (
     TargetExecutionError,
     parse_targets,
     run_targets,
+    validate_target_cookies,
 )
 
 
@@ -40,6 +41,53 @@ def test_parse_targets_rejects_unknown_target(monkeypatch: pytest.MonkeyPatch) -
 
     with pytest.raises(ValueError, match="Unknown check-in targets"):
         parse_targets()
+
+
+def test_validate_target_cookies_accepts_direct_cookie_source(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls: list[tuple[str, list[str]]] = []
+
+    def fake_resolve_cookie(env_name: str, domains: list[str]) -> tuple[str, str]:
+        calls.append((env_name, domains))
+        return "sid=direct", "environment"
+
+    validate_target_cookies(["v2ex"], resolve_cookie=fake_resolve_cookie)
+
+    assert calls == [("V2EX_COOKIE", ["v2ex.com", "www.v2ex.com"])]
+    output = capsys.readouterr().out
+    assert "Startup validation: target 'v2ex' has cookie from environment" in output
+    assert "sid=direct" not in output
+
+
+def test_validate_target_cookies_accepts_cookiecloud_source(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fake_resolve_cookie(env_name: str, domains: list[str]) -> tuple[str, str]:
+        return "sid=from-cloud", "Cookie Cloud"
+
+    validate_target_cookies(["nodeseek"], resolve_cookie=fake_resolve_cookie)
+
+    output = capsys.readouterr().out
+    assert "Startup validation: target 'nodeseek' has cookie from Cookie Cloud" in output
+    assert "sid=from-cloud" not in output
+
+
+def test_validate_target_cookies_rejects_missing_cookie(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fake_resolve_cookie(env_name: str, domains: list[str]) -> tuple[str, str]:
+        return "", ""
+
+    with pytest.raises(ValueError) as excinfo:
+        validate_target_cookies(["deepflood"], resolve_cookie=fake_resolve_cookie)
+
+    message = str(excinfo.value)
+    assert "Startup validation failed" in message
+    assert "deepflood (DEEPFLOOD_COOKIE; domains: deepflood.com, www.deepflood.com)" in message
+
+    output = capsys.readouterr().out
+    assert "Startup validation: target 'deepflood' has no cookie" in output
 
 
 def test_run_targets_logs_success_for_each_target(

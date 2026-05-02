@@ -3,14 +3,37 @@ import subprocess
 import sys
 import threading
 from collections import deque
+from dataclasses import dataclass
 from typing import IO, TypeAlias
 
+from cookiecloud.client import resolve_cookie_value
 
-MODULES = {
-    "nodeseek": "nodeseek.nodeseek",
-    "deepflood": "deepflood.deepflood",
-    "v2ex": "v2ex.v2ex",
+
+@dataclass(frozen=True)
+class TargetConfig:
+    module_name: str
+    cookie_env: str
+    domains: tuple[str, ...]
+
+
+TARGETS = {
+    "nodeseek": TargetConfig(
+        module_name="nodeseek.nodeseek",
+        cookie_env="NODESEEK_COOKIE",
+        domains=("nodeseek.com", "www.nodeseek.com"),
+    ),
+    "deepflood": TargetConfig(
+        module_name="deepflood.deepflood",
+        cookie_env="DEEPFLOOD_COOKIE",
+        domains=("deepflood.com", "www.deepflood.com"),
+    ),
+    "v2ex": TargetConfig(
+        module_name="v2ex.v2ex",
+        cookie_env="V2EX_COOKIE",
+        domains=("v2ex.com", "www.v2ex.com"),
+    ),
 }
+MODULES = {target: config.module_name for target, config in TARGETS.items()}
 
 RECENT_OUTPUT_LINE_LIMIT = 40
 
@@ -41,16 +64,56 @@ def parse_targets() -> list[str]:
     if not targets:
         raise ValueError("Environment variable CHECKIN_TARGETS is empty")
 
-    unknown = [target for target in targets if target not in MODULES]
+    unknown = [target for target in targets if target not in TARGETS]
     if unknown:
         raise ValueError(
             "Unknown check-in targets: "
             + ", ".join(unknown)
             + ". Supported targets: "
-            + ", ".join(MODULES.keys())
+            + ", ".join(TARGETS.keys())
         )
 
     return targets
+
+
+def validate_target_cookies(
+    targets: list[str],
+    *,
+    resolve_cookie=resolve_cookie_value,
+) -> None:
+    failures: list[str] = []
+
+    print("Validating startup cookie configuration...", flush=True)
+    for target in targets:
+        config = TARGETS[target]
+        cookie, source = resolve_cookie(
+            config.cookie_env,
+            list(config.domains),
+        )
+        if cookie:
+            print(
+                f"Startup validation: target '{target}' has cookie from {source}",
+                flush=True,
+            )
+            continue
+
+        domains = ", ".join(config.domains)
+        failures.append(f"{target} ({config.cookie_env}; domains: {domains})")
+        print(
+            f"Startup validation: target '{target}' has no cookie from environment "
+            "or Cookie Cloud",
+            flush=True,
+        )
+
+    if failures:
+        raise ValueError(
+            "Startup validation failed: no cookie available for configured target(s): "
+            + "; ".join(failures)
+            + ". Configure the direct cookie environment variable or Cookie Cloud with "
+            "matching domain cookies."
+        )
+
+    print("Startup cookie validation completed", flush=True)
 
 
 def _forward_stream(
@@ -144,7 +207,7 @@ def _print_failure_output(target: str, recent_output: list[tuple[str, str]]) -> 
 
 def run_targets(targets: list[str]) -> int:
     for target in targets:
-        module_name = MODULES[target]
+        module_name = TARGETS[target].module_name
         print(
             f"Starting check-in target '{target}' ({module_name})",
             flush=True,

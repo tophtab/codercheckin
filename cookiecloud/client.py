@@ -12,18 +12,32 @@ from config import REQUEST_TIMEOUT_SECONDS
 
 
 _COOKIE_CLOUD_CACHE = None
+_COOKIE_CLOUD_FETCH_ATTEMPTED = False
 
 
 def get_cookie_value(env_name: str, domains: list[str]) -> str:
     """Resolve a cookie from direct env config or Cookie Cloud."""
+    cookie, _source = resolve_cookie_value(env_name, domains, announce=True)
+    return cookie
+
+
+def resolve_cookie_value(
+    env_name: str,
+    domains: list[str],
+    *,
+    announce: bool = False,
+) -> tuple[str, str]:
+    """Resolve a cookie and return its safe source label."""
     direct_cookie = os.environ.get(env_name, "").strip()
     if direct_cookie:
-        return direct_cookie
+        return direct_cookie, "environment"
 
     cookie = _get_cookiecloud_cookie(domains)
-    if cookie:
+    if cookie and announce:
         print(f"{env_name} loaded from Cookie Cloud", flush=True)
-    return cookie
+    if cookie:
+        return cookie, "Cookie Cloud"
+    return "", ""
 
 
 def _get_cookiecloud_cookie(domains: list[str]) -> str:
@@ -57,6 +71,13 @@ def _get_cookiecloud_cookie(domains: list[str]) -> str:
 
 def _fetch_cookiecloud_payload():
     global _COOKIE_CLOUD_CACHE
+    global _COOKIE_CLOUD_FETCH_ATTEMPTED
+
+    if _COOKIE_CLOUD_FETCH_ATTEMPTED:
+        return _COOKIE_CLOUD_CACHE
+
+    _COOKIE_CLOUD_FETCH_ATTEMPTED = True
+
     if _COOKIE_CLOUD_CACHE is not None:
         return _COOKIE_CLOUD_CACHE
 

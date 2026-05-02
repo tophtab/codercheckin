@@ -57,6 +57,7 @@ Examples:
 - Long-running scheduler entrypoint command: `python scheduler.py`
 - Batch target selector env: `CHECKIN_TARGETS=nodeseek,deepflood,v2ex`
 - Batch target runner signature: `run_targets(targets: list[str]) -> int`
+- Startup cookie validation signature: `validate_target_cookies(targets: list[str]) -> None`
 - Scheduler timezone env: `TZ=Asia/Shanghai`
 - Scheduler cron env: `CHECKIN_CRON=30 3 * * *`
 - Deployment image env: `CLOUDCHECKIN_IMAGE=tophtab/cloudcheckin:latest`
@@ -78,6 +79,11 @@ Examples:
 - Cookie Cloud configuration uses environment variables only:
   `COOKIE_CLOUD_URL`, `COOKIE_CLOUD_UUID`, `COOKIE_CLOUD_PASSWORD`, `COOKIE_CLOUD_CRYPTO_TYPE`
 - The shared resolver returns a request-ready cookie header string in `name=value; name2=value2` form.
+- The scheduler must validate cookie availability for every configured
+  `CHECKIN_TARGETS` target before entering the wait loop.
+- Startup validation may accept a non-empty direct platform cookie or a matching
+  Cookie Cloud cookie, but it must not print the cookie value, token, password,
+  or full request headers.
 - If no direct cookie exists and Cookie Cloud cannot provide a matching domain cookie, the platform script must still fail fast before making network requests.
 - Platform modules must be safe to import in tests: importing `nodeseek.nodeseek`, `deepflood.deepflood`, or `v2ex.v2ex` must not read cookies or call external services.
 - External requests must set a finite timeout so NAS scheduler subprocesses cannot hang indefinitely on one platform.
@@ -106,6 +112,8 @@ Examples:
 | Direct platform cookie missing, Cookie Cloud configured, matching domain found | Use Cookie Cloud cookie and print a safe success hint |
 | Direct platform cookie missing, Cookie Cloud not configured | Return empty string and let the platform entrypoint raise `ValueError` |
 | Cookie Cloud request fails or returns bad JSON | Print a safe error, return empty string, and let the platform entrypoint fail fast |
+| Scheduler startup target has direct cookie or Cookie Cloud match | Log the safe cookie source and continue to scheduling |
+| Scheduler startup target has no direct cookie and no Cookie Cloud match | Exit non-zero before logging the next scheduled run |
 | `CHECKIN_TARGETS` contains unsupported names | `run.py` exits non-zero with the supported target list |
 | A check-in target subprocess exits non-zero | `run_targets()` logs the target failure, raises an exception with the failing target and recent stdout/stderr text, and does not run later targets |
 | A check-in target subprocess cannot start | `run_targets()` raises a target-specific exception that preserves the module/startup error text and does not run later targets |
@@ -125,12 +133,19 @@ Examples:
 - Base: `NODESEEK_COOKIE` is empty, Cookie Cloud is configured, and [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:20) builds the cookie header from the matched domain payload.
 - Bad: `V2EX_COOKIE` is empty and Cookie Cloud has no matching `v2ex.com` cookie, so [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:102) raises before the sign-in flow starts.
 - Good: [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1) starts with `TZ=Asia/Shanghai` and `CHECKIN_CRON=30 3 * * *`, logs the next run, and then delegates to [checkin_runner.py](/home/toph/CloudCheckin/checkin_runner.py:1).
+- Base: `scheduler.py` calls `validate_target_cookies(parse_targets())` once at
+  startup, before computing the first next-run timestamp.
+- Bad: `scheduler.py` waits until the first cron execution to discover that the
+  enabled target has neither a direct cookie nor a Cookie Cloud match.
 
 ### 6. Tests Required
 
 - Syntax-check the runner, shared resolver, and affected platform modules with `python3 -m py_compile`.
 - Syntax-check the scheduler entrypoint with `python3 -m py_compile scheduler.py`.
 - Validate runner argument handling with an invalid `CHECKIN_TARGETS` value and assert non-zero exit plus a supported-target message.
+- Validate startup cookie checks with direct-cookie success, Cookie Cloud
+  success, missing-cookie failure, no raw secret output, and scheduler fail-fast
+  behavior before the wait loop.
 - Validate runner target logs by stubbing subprocess execution and asserting
   per-target start, success, failure, and first-failure stop behavior.
 - Validate failed runner subprocesses still forward stdout/stderr and include a
@@ -193,6 +208,26 @@ Instead, keep one-shot execution and scheduling separate:
 next_run = croniter(cron_expression, now).get_next(datetime)
 sleep_until(next_run)
 run_targets(targets)
+```
+
+Do not let the long-running scheduler defer missing-cookie errors until the first
+cron execution:
+
+```python
+targets = parse_targets()
+while True:
+    sleep_until(next_run)
+    run_targets(targets)
+```
+
+Instead, validate safe cookie availability once before entering the wait loop:
+
+```python
+targets = parse_targets()
+validate_target_cookies(targets)
+while True:
+    sleep_until(next_run)
+    run_targets(targets)
 ```
 
 ---

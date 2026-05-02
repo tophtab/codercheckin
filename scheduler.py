@@ -7,7 +7,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from croniter import croniter
 
-from checkin_runner import TargetExecutionError, parse_targets, run_targets
+from checkin_runner import (
+    TargetExecutionError,
+    parse_targets,
+    run_targets,
+    validate_target_cookies,
+)
 
 
 DEFAULT_CRON = "30 3 * * *"
@@ -102,6 +107,7 @@ def sleep_until(
 def main() -> int:
     cron_expression, timezone_name, timezone = load_schedule_config()
     targets = parse_targets()
+    validate_target_cookies(targets)
     scheduler_started_at = datetime.now(timezone)
 
     print(
