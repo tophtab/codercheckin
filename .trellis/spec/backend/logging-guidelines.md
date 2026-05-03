@@ -7,9 +7,11 @@
 ## Overview
 
 This project does not use Python's `logging` module or a structured logging
-framework. The actual convention today is straightforward console logging:
+framework. The actual convention today is timestamped console logging:
 
-- Python scripts use `print(..., flush=True)`
+- Python scripts use `runtime_log.log(...)`
+- `runtime_log.log(...)` prefixes every runtime log line with local process time
+  in `YYYY-MM-DD HH:MM:SS (UTC+08:00) message` form when `TZ=Asia/Shanghai`
 - Important outcomes are also pushed to Telegram
 
 The purpose of logging here is operational visibility in local runs, Docker
@@ -22,8 +24,8 @@ container logs, and NAS troubleshooting, not analytics or log aggregation.
 The repository does not formally implement log levels, but current usage maps to
 these practical categories:
 
-- Progress information: plain `print` or `console.log`
-- Failure details: `print` with explicit error text
+- Progress information: `runtime_log.log(...)` or `console.log`
+- Failure details: `runtime_log.log(...)` with explicit error text
 - User-visible completion/failure notices: Telegram notifications
 
 Examples:
@@ -51,10 +53,87 @@ Current conventions to preserve:
 - Include platform or workflow context directly in the message text.
 - Include response status or parsed outcome when it is useful for debugging.
 - Flush Python output immediately in script and container output.
+- Use the process/local timezone for the log prefix; do not hard-code a timezone
+  offset in call sites.
+- Preserve the existing message text after the timestamp prefix.
 - Include timestamps when the event timing matters, as in [scheduler.py](/home/toph/CloudCheckin/scheduler.py:50).
 
 If future work adds a logging library, keep the output simple and compatible with
 container logs unless there is a clear operational need for more structure.
+
+---
+
+## Scenario: Timestamped Runtime Console Logs
+
+### 1. Scope / Trigger
+
+- Trigger: adding or changing Python runtime logs, especially scheduler, runner,
+  Cookie Cloud, Telegram, or platform module output that appears in Docker/NAS
+  logs.
+
+### 2. Signatures
+
+- `runtime_log.format_log_timestamp(value: datetime | None = None) -> str`
+- `runtime_log.format_log_message(message: object = "", *, now: datetime | None = None) -> str`
+- `runtime_log.log(message: object = "", *, flush: bool = True, file: TextIO | None = None, now: datetime | None = None) -> None`
+
+### 3. Contracts
+
+- Runtime logs must be emitted through `runtime_log.log(...)` unless a test is
+  intentionally exercising Python's raw stdout/stderr behavior.
+- The timestamp prefix must use the process-local timezone from
+  `datetime.now().astimezone()` and render as
+  `YYYY-MM-DD HH:MM:SS (UTC+08:00) message` when `TZ=Asia/Shanghai`.
+- Message text must stay intact after the prefix so existing operational log
+  searches still work.
+- Multi-line messages must receive a timestamp prefix on every non-empty output
+  line.
+- Log calls must flush by default so Docker and NAS log viewers show progress
+  promptly.
+
+### 4. Validation & Error Matrix
+
+| Condition | Expected Behavior |
+|----------|-------------------|
+| `TZ=Asia/Shanghai` | Prefix contains `(UTC+08:00)` |
+| Process timezone has a negative offset | Prefix contains `UTC-..:..` with the correct sign |
+| Message has multiple lines | Each output line starts with a timestamp prefix |
+| Message is an exception object | Log text is `str(exception)` after the timestamp |
+| Runtime code needs a new progress or failure log | Use `runtime_log.log(...)`, not direct `print(..., flush=True)` |
+
+### 5. Good / Base / Bad Cases
+
+- Good: `log("Startup cookie validation completed")` emits
+  `2026-05-03 07:17:00 (UTC+08:00) Startup cookie validation completed`.
+- Base: `log(err)` preserves the exception message after the timestamp without
+  logging secrets.
+- Bad: `print("Startup validation failed", flush=True)` emits a Docker log line
+  with no application timestamp and makes restart timelines harder to diagnose.
+
+### 6. Tests Required
+
+- Unit-test `format_log_timestamp(...)` for positive and negative UTC offsets.
+- Unit-test `format_log_message(...)` for single-line and multi-line messages.
+- Assert affected runtime call sites produce timestamp-prefixed output, using a
+  shared test helper instead of repeating the regex in every test file.
+- Keep existing substring assertions for operational message content after
+  adding prefix assertions.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+print("Cookie Cloud payload decrypted client-side", flush=True)
+```
+
+#### Correct
+
+```python
+from runtime_log import log
+
+log("Cookie Cloud payload decrypted client-side")
+```
 
 ---
 
@@ -91,7 +170,11 @@ Examples:
 
 ## Common Mistakes
 
-- Do not add silent failure paths with no `print` or `console` output.
+- Do not add silent failure paths with no `runtime_log.log(...)` or `console`
+  output.
+- Do not add new direct `print(..., flush=True)` runtime logs in Python modules;
+  use `runtime_log.log(...)` so Docker/NAS output keeps a consistent timestamp
+  prefix.
 - Do not log secrets just because container logs are private; treat logs as potentially exposed.
 - Do not rely only on Telegram for diagnosis. Stdout should still explain the failure.
 - Do not introduce a heavy logging framework unless the repository operational model actually requires it.

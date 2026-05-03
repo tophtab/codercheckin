@@ -13,6 +13,7 @@ from checkin_runner import (
     run_targets,
     validate_target_cookies,
 )
+from runtime_log import log
 
 
 DEFAULT_CRON = "30 3 * * *"
@@ -93,11 +94,10 @@ def sleep_until(
             current_time - last_status_log
         ).total_seconds() >= status_log_interval_seconds
         if should_log_status:
-            print(
+            log(
                 "Waiting for next run at "
                 f"{format_timestamp(target_time)} "
-                f"({format_duration(seconds_remaining)} remaining)",
-                flush=True,
+                f"({format_duration(seconds_remaining)} remaining)"
             )
             last_status_log = current_time
 
@@ -110,38 +110,28 @@ def main() -> int:
     validate_target_cookies(targets)
     scheduler_started_at = datetime.now(timezone)
 
-    print(
+    log(
         f"Scheduler started at {format_timestamp(scheduler_started_at)} with "
         f"TZ={timezone_name}, CHECKIN_CRON={cron_expression}, "
-        f"CHECKIN_TARGETS={','.join(targets)}",
-        flush=True,
+        f"CHECKIN_TARGETS={','.join(targets)}"
     )
 
     while True:
         now = datetime.now(timezone)
         next_run = get_next_run(now, cron_expression)
-        print(f"Next run scheduled at {format_timestamp(next_run)}", flush=True)
+        log(f"Next run scheduled at {format_timestamp(next_run)}")
         sleep_until(next_run)
 
         started_at = datetime.now(timezone)
-        print(
-            f"Starting scheduled check-in at {format_timestamp(started_at)}",
-            flush=True,
-        )
+        log(f"Starting scheduled check-in at {format_timestamp(started_at)}")
         try:
             run_targets(targets)
         except TargetExecutionError:
             finished_at = datetime.now(timezone)
-            print(
-                f"Scheduled check-in failed at {format_timestamp(finished_at)}",
-                flush=True,
-            )
+            log(f"Scheduled check-in failed at {format_timestamp(finished_at)}")
             raise
         finished_at = datetime.now(timezone)
-        print(
-            f"Scheduled check-in finished at {format_timestamp(finished_at)}",
-            flush=True,
-        )
+        log(f"Scheduled check-in finished at {format_timestamp(finished_at)}")
         continue
 
 
@@ -149,8 +139,8 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except KeyboardInterrupt:
-        print("Scheduler stopped by user", flush=True)
+        log("Scheduler stopped by user")
         sys.exit(0)
     except Exception as err:
-        print(err, flush=True)
+        log(err)
         sys.exit(1)

@@ -190,7 +190,7 @@ Instead, treat it as an idempotent success path:
 
 ```python
 if signed:
-    print("V2EX already checked in today", flush=True)
+    log("V2EX already checked in today")
     send_tg_notification(message)
 ```
 

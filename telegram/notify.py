@@ -6,6 +6,7 @@ import urllib.parse
 from dotenv import load_dotenv
 
 from config import REQUEST_TIMEOUT_SECONDS
+from runtime_log import log
 
 load_dotenv()
 
@@ -16,7 +17,7 @@ def send_tg_notification(message: str) -> bool:
     telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 
     if not telegram_token or not telegram_chat_id:
-        print("Telegram configuration is incomplete, cannot send notification", flush=True)
+        log("Telegram configuration is incomplete, cannot send notification")
         return False
 
     params = urllib.parse.urlencode({"chat_id": telegram_chat_id, "text": message})
@@ -29,14 +30,14 @@ def send_tg_notification(message: str) -> bool:
         result = json.loads(data)
 
         if response.status == 200 and result.get("ok"):
-            print("Notification sent successfully", flush=True)
+            log("Notification sent successfully")
             return True
 
-        print(f"Notification sent failed: {response.status} - {data}", flush=True)
+        log(f"Notification sent failed: {response.status} - {data}")
         return False
 
     except Exception as e:
-        print(f"Notification sending process error: {e}", flush=True)
+        log(f"Notification sending process error: {e}")
         return False
     finally:
         conn.close()

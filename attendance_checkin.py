@@ -7,6 +7,7 @@ from curl_cffi import requests
 
 from checkin_response import is_successful_checkin_response
 from config import DEFAULT_DELAY_RANGE_SECONDS, DEFAULT_USER_AGENT, REQUEST_TIMEOUT_SECONDS
+from runtime_log import log
 
 
 @dataclass(frozen=True)
@@ -40,10 +41,10 @@ def run_attendance_checkin(
         raise ValueError(f"Environment variable {config.env_name} is empty")
 
     for idx, cookie in enumerate(cookie_list, start=1):
-        print(f"Using the {idx} account for check-in...", flush=True)
+        log(f"Using the {idx} account for check-in...")
 
         delay = randint(*DEFAULT_DELAY_RANGE_SECONDS)
-        print(f"The {idx} account will wait for {delay} seconds...", flush=True)
+        log(f"The {idx} account will wait for {delay} seconds...")
         sleep(delay)
 
         headers = _build_headers(config, cookie)
@@ -57,21 +58,21 @@ def run_attendance_checkin(
             )
         except Exception as err:
             error_message = f"{config.name} account {idx} check-in process error: {err}"
-            print(error_message, flush=True)
+            log(error_message)
             notify(error_message)
             return 1
 
-        print(f"The {idx} account's Status Code: {response.status_code}", flush=True)
-        print(f"The {idx} account's Response Content: {response.text}", flush=True)
+        log(f"The {idx} account's Status Code: {response.status_code}")
+        log(f"The {idx} account's Response Content: {response.text}")
 
         if is_successful_checkin_response(response.status_code, response.text):
             success_message = f"{config.name} account {idx} check-in successful"
-            print(success_message, flush=True)
+            log(success_message)
             notify(success_message)
             continue
 
         fail_message = f"{config.name} account {idx} check-in failed, response content: {response.text}"
-        print(fail_message, flush=True)
+        log(fail_message)
         notify(fail_message)
         return 1
 

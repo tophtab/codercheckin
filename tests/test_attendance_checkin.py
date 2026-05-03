@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from attendance_checkin import AttendanceConfig, run_attendance_checkin
+from tests.log_assertions import assert_timestamped_lines
 
 
 CONFIG = AttendanceConfig(
@@ -15,7 +16,9 @@ CONFIG = AttendanceConfig(
 )
 
 
-def test_run_attendance_checkin_posts_each_cookie_with_timeout() -> None:
+def test_run_attendance_checkin_posts_each_cookie_with_timeout(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     calls = []
     notifications = []
 
@@ -58,6 +61,9 @@ def test_run_attendance_checkin_posts_each_cookie_with_timeout() -> None:
         "TESTSITE account 1 check-in successful",
         "TESTSITE account 2 check-in successful",
     ]
+    output_lines = assert_timestamped_lines(capsys.readouterr().out)
+    assert any("Using the 1 account for check-in..." in line for line in output_lines)
+    assert any("TESTSITE account 2 check-in successful" in line for line in output_lines)
 
 
 def test_run_attendance_checkin_returns_failure_on_business_error() -> None:

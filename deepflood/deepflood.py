@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 from attendance_checkin import AttendanceConfig, run_attendance_checkin
 from cookiecloud.client import get_cookie_value
+from runtime_log import log
 from telegram.notify import send_tg_notification
 
 
@@ -30,5 +31,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception as err:
-        print(err, flush=True)
+        log(err)
         sys.exit(1)

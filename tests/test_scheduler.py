@@ -5,6 +5,7 @@ import pytest
 
 import scheduler
 from checkin_runner import TargetExecutionError
+from tests.log_assertions import assert_timestamped_lines
 
 
 def test_format_timestamp_uses_readable_local_timezone() -> None:
@@ -49,6 +50,7 @@ def test_sleep_until_logs_wait_status_periodically(capsys) -> None:
     )
 
     output = capsys.readouterr().out
+    assert_timestamped_lines(output)
     assert (
         "Waiting for next run at 2026-04-29 02:01:00 Asia/Shanghai (UTC+08:00) "
         "(1h 1m remaining)"
@@ -89,6 +91,7 @@ def test_main_propagates_target_failure(monkeypatch, capsys) -> None:
     assert sleep_calls == [next_run]
 
     output = capsys.readouterr().out
+    assert_timestamped_lines(output)
     assert "Next run scheduled at 2026-04-29 03:30:00 Asia/Shanghai (UTC+08:00)" in output
     assert "Scheduled check-in failed at " in output
 

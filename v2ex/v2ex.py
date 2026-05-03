@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from config import REQUEST_TIMEOUT_SECONDS
 from cookiecloud.client import get_cookie_value
+from runtime_log import log
 from telegram.notify import send_tg_notification
 
 
@@ -86,7 +87,7 @@ def main() -> int:
     once, signed, message = get_once(headers, message)
 
     if signed:
-        print("V2EX already checked in today", flush=True)
+        log("V2EX already checked in today")
         send_tg_notification(message)
         return 0
 
@@ -111,5 +112,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception as err:
-        print(err, flush=True)
+        log(err)
         sys.exit(1)

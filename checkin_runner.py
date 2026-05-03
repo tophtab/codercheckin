@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import IO, TypeAlias
 
 from cookiecloud.client import resolve_cookie_value
+from runtime_log import log
 
 
 @dataclass(frozen=True)
@@ -83,7 +84,7 @@ def validate_target_cookies(
 ) -> None:
     failures: list[str] = []
 
-    print("Validating startup cookie configuration...", flush=True)
+    log("Validating startup cookie configuration...")
     for target in targets:
         config = TARGETS[target]
         cookie, source = resolve_cookie(
@@ -91,18 +92,14 @@ def validate_target_cookies(
             list(config.domains),
         )
         if cookie:
-            print(
-                f"Startup validation: target '{target}' has cookie from {source}",
-                flush=True,
-            )
+            log(f"Startup validation: target '{target}' has cookie from {source}")
             continue
 
         domains = ", ".join(config.domains)
         failures.append(f"{target} ({config.cookie_env}; domains: {domains})")
-        print(
+        log(
             f"Startup validation: target '{target}' has no cookie from environment "
-            "or Cookie Cloud",
-            flush=True,
+            "or Cookie Cloud"
         )
 
     if failures:
@@ -113,7 +110,7 @@ def validate_target_cookies(
             "matching domain cookies."
         )
 
-    print("Startup cookie validation completed", flush=True)
+    log("Startup cookie validation completed")
 
 
 def _forward_stream(
@@ -200,22 +197,19 @@ def _format_failure_summary(target: str, returncode: int | None) -> str:
 
 
 def _print_failure_output(target: str, recent_output: list[tuple[str, str]]) -> None:
-    print(f"Recent output from failed target '{target}':", flush=True)
+    log(f"Recent output from failed target '{target}':")
     for line in _format_failure_output_lines(recent_output):
-        print(line, flush=True)
+        log(line)
 
 
 def run_targets(targets: list[str]) -> int:
     for target in targets:
         module_name = TARGETS[target].module_name
-        print(
-            f"Starting check-in target '{target}' ({module_name})",
-            flush=True,
-        )
+        log(f"Starting check-in target '{target}' ({module_name})")
         try:
             returncode, recent_output = _run_target_process(target, module_name)
         except TargetExecutionError as err:
-            print(_format_failure_summary(err.target, err.returncode), flush=True)
+            log(_format_failure_summary(err.target, err.returncode))
             _print_failure_output(err.target, err.recent_output)
             raise
         if returncode != 0:
@@ -224,8 +218,8 @@ def run_targets(targets: list[str]) -> int:
                 returncode=returncode,
                 recent_output=recent_output,
             )
-            print(_format_failure_summary(error.target, error.returncode), flush=True)
+            log(_format_failure_summary(error.target, error.returncode))
             _print_failure_output(error.target, error.recent_output)
             raise error
-        print(f"Check-in target '{target}' succeeded", flush=True)
+        log(f"Check-in target '{target}' succeeded")
     return 0

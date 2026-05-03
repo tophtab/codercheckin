@@ -9,6 +9,7 @@ import requests
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from config import REQUEST_TIMEOUT_SECONDS
+from runtime_log import log
 
 
 _COOKIE_CLOUD_CACHE = None
@@ -34,7 +35,7 @@ def resolve_cookie_value(
 
     cookie = _get_cookiecloud_cookie(domains)
     if cookie and announce:
-        print(f"{env_name} loaded from Cookie Cloud", flush=True)
+        log(f"{env_name} loaded from Cookie Cloud")
     if cookie:
         return cookie, "Cookie Cloud"
     return "", ""
@@ -47,15 +48,12 @@ def _get_cookiecloud_cookie(domains: list[str]) -> str:
 
     cookie_data = payload.get("cookie_data")
     if not isinstance(cookie_data, dict):
-        print("Cookie Cloud payload does not contain cookie_data", flush=True)
+        log("Cookie Cloud payload does not contain cookie_data")
         return ""
 
     matched_hosts = _find_matching_hosts(cookie_data, domains)
     if not matched_hosts:
-        print(
-            f"Cookie Cloud did not return cookies for domains: {', '.join(domains)}",
-            flush=True,
-        )
+        log(f"Cookie Cloud did not return cookies for domains: {', '.join(domains)}")
         return ""
 
     merged = {}
@@ -125,14 +123,14 @@ def _request_cookiecloud_payload(method: str, endpoint: str, json_body: dict | N
         response.raise_for_status()
         payload = response.json()
     except requests.RequestException as exc:
-        print(f"Cookie Cloud {method.upper()} request failed: {exc}", flush=True)
+        log(f"Cookie Cloud {method.upper()} request failed: {exc}")
         return None
     except ValueError as exc:
-        print(f"Cookie Cloud returned invalid JSON: {exc}", flush=True)
+        log(f"Cookie Cloud returned invalid JSON: {exc}")
         return None
 
     if not isinstance(payload, dict):
-        print("Cookie Cloud payload is not a JSON object", flush=True)
+        log("Cookie Cloud payload is not a JSON object")
         return None
 
     return payload
@@ -148,7 +146,7 @@ def _normalize_cookiecloud_payload(payload: dict | None, uuid: str, password: st
 
     encrypted = str(payload.get("encrypted", "")).strip()
     if not encrypted:
-        print("Cookie Cloud payload does not contain cookie_data", flush=True)
+        log("Cookie Cloud payload does not contain cookie_data")
         return None
 
     decrypted = _decrypt_cookiecloud_payload(uuid, password, encrypted)
@@ -156,10 +154,10 @@ def _normalize_cookiecloud_payload(payload: dict | None, uuid: str, password: st
         return None
 
     if not isinstance(decrypted.get("cookie_data"), dict):
-        print("Cookie Cloud decrypted payload does not contain cookie_data", flush=True)
+        log("Cookie Cloud decrypted payload does not contain cookie_data")
         return None
 
-    print("Cookie Cloud payload decrypted client-side", flush=True)
+    log("Cookie Cloud payload decrypted client-side")
     return decrypted
 
 
@@ -167,11 +165,11 @@ def _decrypt_cookiecloud_payload(uuid: str, password: str, encrypted: str):
     try:
         raw_encrypted = base64.b64decode(encrypted)
     except (ValueError, binascii.Error) as exc:
-        print(f"Cookie Cloud encrypted payload is not valid base64: {exc}", flush=True)
+        log(f"Cookie Cloud encrypted payload is not valid base64: {exc}")
         return None
 
     if len(raw_encrypted) < 16 or raw_encrypted[:8] != b"Salted__":
-        print("Cookie Cloud encrypted payload has invalid OpenSSL header", flush=True)
+        log("Cookie Cloud encrypted payload has invalid OpenSSL header")
         return None
 
     salt = raw_encrypted[8:16]
@@ -188,11 +186,11 @@ def _decrypt_cookiecloud_payload(uuid: str, password: str, encrypted: str):
         unpadded = _pkcs7_unpad(decrypted)
         payload = json.loads(unpadded.decode("utf-8"))
     except Exception as exc:
-        print(f"Cookie Cloud client-side decryption failed: {exc}", flush=True)
+        log(f"Cookie Cloud client-side decryption failed: {exc}")
         return None
 
     if not isinstance(payload, dict):
-        print("Cookie Cloud decrypted payload is not a JSON object", flush=True)
+        log("Cookie Cloud decrypted payload is not a JSON object")
         return None
 
     return payload
