@@ -205,7 +205,14 @@ Created config.py for unified configuration, simplified code structure, improved
 
 ### Main Changes
 
-(Add details)
+- Added shared `runtime_log.log(...)` console output with process-timezone
+  prefixes such as `2026-05-03 07:17:00 (UTC+08:00)`.
+- Updated scheduler, runner, Cookie Cloud, Telegram, and platform modules to use
+  timestamped runtime logs.
+- Added runtime log tests and timestamp-prefix assertions for existing runtime
+  output tests.
+- Captured the logging convention in backend specs and archived the Trellis
+  task.
 
 ### Git Commits
 
@@ -385,6 +392,43 @@ Streamlined README around copy-ready Docker Compose deployment instructions, con
 ### Testing
 
 - [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 11: Add timestamped runtime logs
+
+**Date**: 2026-05-03
+**Task**: Add timestamped runtime logs
+**Branch**: `main`
+
+### Summary
+
+Added process-timezone timestamp prefixes to CloudCheckin runtime logs, updated logging specs and tests, and archived the log-timestamps task.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e695522` | feat(logging): prefix runtime logs with timestamps |
+| `527eac8` | chore(task): archive 05-03-log-timestamps |
+
+### Testing
+
+- [OK] `python3 -m pytest` -> 33 passed
+- [OK] `python3 -m compileall attendance_checkin.py checkin_runner.py cookiecloud/client.py deepflood/deepflood.py nodeseek/nodeseek.py runtime_log.py run.py scheduler.py telegram/notify.py v2ex/v2ex.py tests`
+- [WARN] `python3 -m ruff check .` unavailable: `ruff` is not installed
+- [WARN] `python3 -m mypy .` unavailable: `mypy` is not installed
 
 ### Status
 
