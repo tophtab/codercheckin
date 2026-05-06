@@ -543,3 +543,36 @@ Aligned Trellis ignore rules with local architecture: workspace memory is tracka
 ### Next Steps
 
 - None - task complete
+
+
+## Session 15: Track Trellis developer file
+
+**Date**: 2026-05-06
+**Task**: Track Trellis developer file
+**Branch**: `main`
+
+### Summary
+
+Stopped ignoring .trellis/.developer, kept runtime session files ignored, and removed obsolete Trellis backup directories.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `44ee585` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
