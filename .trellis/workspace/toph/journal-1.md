@@ -510,3 +510,36 @@ Updated V2EX daily mission flow to confirm success from the final mission page, 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 14: Optimize Trellis gitignore boundaries
+
+**Date**: 2026-05-06
+**Task**: Optimize Trellis gitignore boundaries
+**Branch**: `main`
+
+### Summary
+
+Aligned Trellis ignore rules with local architecture: workspace memory is trackable, runtime/developer/backups/caches remain ignored, and global workspace index is committed.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2daa005` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 13
+- **Total Sessions**: 14
 - **Last Active**: 2026-05-06
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~512 | Active |
+| `journal-1.md` | ~545 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 14 | 2026-05-06 | Optimize Trellis gitignore boundaries | `2daa005` | `main` |
 | 13 | 2026-05-06 | Improve V2EX redeem confirmation | `8229b07` | `main` |
 | 12 | 2026-05-06 | Fix V2EX check-in failure | `04e2aca`, `15ff645` | `main` |
 | 11 | 2026-05-03 | Add timestamped runtime logs | `e695522`, `527eac8` | `main` |
