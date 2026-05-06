@@ -243,6 +243,79 @@ while True:
 
 ---
 
+## Scenario: V2EX Daily Mission Confirmation
+
+### 1. Scope / Trigger
+
+- Trigger: changing the V2EX daily mission request flow, success detection, or
+  optional balance parsing in [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:1).
+
+### 2. Signatures
+
+- Daily mission page: `GET https://www.v2ex.com/mission/daily`
+- Redeem URL shape: `GET https://www.v2ex.com/mission/daily/redeem?once=<token>`
+- Check-in helper signature: `check_in(once: str, headers: dict[str, str], message: str) -> tuple[bool, str]`
+- Balance helper signature: `balance(headers: dict[str, str]) -> tuple[str | None, str | None]`
+
+### 3. Contracts
+
+- The `once` token is parsed from the mission page and must not be logged.
+- A page containing `每日登录奖励已领取` means the daily mission is complete.
+- A page containing `已成功领取每日登录奖励` is an immediate redeem success marker.
+- A login page marker means the cookie is expired or unauthenticated.
+- Balance parsing is supplemental after a successful redeem; missing balance
+  data must not convert the check-in into a failure.
+
+### 4. Validation & Error Matrix
+
+| Condition | Expected Behavior |
+|----------|-------------------|
+| Initial mission page already says reward claimed | Treat as successful idempotent run |
+| Redeem response is unclear, final mission page says reward claimed | Treat as successful check-in |
+| Redeem response says success, final mission confirmation request fails | Log confirmation failure and keep success |
+| Final mission page indicates login required | Treat as failure even if redeem response looked successful |
+| Redeem and final mission page both lack success markers | Fail with a clear V2EX redeem message |
+| Balance parsing fails after successful redeem | Log the parsing failure, send the normal notification, and return success |
+
+### 5. Good / Base / Bad Cases
+
+- Good: redeem returns a changed or redirected page, final mission page contains
+  `每日登录奖励已领取`, and the job returns success.
+- Base: redeem returns `已成功领取每日登录奖励`; final confirmation fails due to
+  a transient request error, and the job keeps the immediate success.
+- Bad: after a successful redeem, `/balance` HTML changes and parsing returns
+  `None`; do not raise `ValueError` for the whole check-in.
+
+### 6. Tests Required
+
+- Test that `check_in()` succeeds when final mission confirmation contains the
+  already-claimed marker even if the redeem response text changed.
+- Test that `check_in()` fails when the final mission page indicates login is
+  required.
+- Test that `main()` keeps a successful return code and sends the success
+  notification when balance parsing returns `(None, None)`.
+- Assert logs never include the `once` token.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+success, message = check_in(once, headers, message)
+if success and balance(headers) == (None, None):
+    raise ValueError("V2EX balance parsing failed")
+```
+
+#### Correct
+
+```python
+success, message = check_in(once, headers, message)
+if success and balance(headers) == (None, None):
+    log("V2EX balance parsing failed after successful redeem")
+```
+
+---
+
 ## Testing Requirements
 
 The repository now has a minimal `pytest` entrypoint configured through:

@@ -22,6 +22,7 @@ REDEEM_SUCCESS_MARKERS = (
     "已成功领取每日登录奖励",
 )
 ONCE_PATTERN = re.compile(r"redeem\?once=([^'\"&<\s]+)")
+MISSION_DAILY_URL = "https://www.v2ex.com/mission/daily"
 
 
 def build_headers(cookie: str) -> dict[str, str]:
@@ -69,7 +70,7 @@ def _is_redeem_success_page(content: str) -> bool:
 
 
 def get_once(headers: dict[str, str], message: str) -> tuple[str | None, bool, str]:
-    content = _fetch_page("https://www.v2ex.com/mission/daily", headers)
+    content = _fetch_page(MISSION_DAILY_URL, headers)
 
     if _is_login_page(content):
         log("V2EX daily mission page indicates the cookie is unauthenticated")
@@ -88,21 +89,41 @@ def get_once(headers: dict[str, str], message: str) -> tuple[str | None, bool, s
 
 def check_in(once: str, headers: dict[str, str], message: str) -> tuple[bool, str]:
     try:
-        content = _fetch_page(f"https://www.v2ex.com/mission/daily/redeem?once={once}", headers)
+        content = _fetch_page(f"{MISSION_DAILY_URL}/redeem?once={once}", headers)
     except Exception as exc:
         log(f"V2EX redeem request failed before response classification: {type(exc).__name__}")
         return False, message + "Fail to check in: redeem request failed before response classification\n"
 
-    if _is_redeem_success_page(content):
-        return True, message + "Check in successfully\n"
-
-    if _is_already_claimed_page(content):
-        log("V2EX redeem response indicates the daily reward was already claimed")
-        return True, message + "Daily reward was already claimed after redeem request\n"
-
     if _is_login_page(content):
         log("V2EX redeem response indicates the cookie is unauthenticated")
         return False, message + "Fail to check in: cookie is unauthenticated or expired\n"
+
+    redeem_succeeded = _is_redeem_success_page(content)
+    redeem_already_claimed = _is_already_claimed_page(content)
+
+    try:
+        final_content = _fetch_page(MISSION_DAILY_URL, headers)
+    except Exception as exc:
+        log(f"V2EX final mission confirmation failed: {type(exc).__name__}")
+        if redeem_succeeded:
+            return True, message + "Check in successfully\n"
+        if redeem_already_claimed:
+            return True, message + "Daily reward was already claimed after redeem request\n"
+        return False, message + "Fail to check in: final mission confirmation failed\n"
+
+    if _is_already_claimed_page(final_content):
+        return True, message + "Check in successfully\n"
+
+    if _is_login_page(final_content):
+        log("V2EX final mission page indicates the cookie is unauthenticated")
+        return False, message + "Fail to check in: cookie is unauthenticated or expired\n"
+
+    if redeem_succeeded:
+        return True, message + "Check in successfully\n"
+
+    if redeem_already_claimed:
+        log("V2EX redeem response indicates the daily reward was already claimed")
+        return True, message + "Daily reward was already claimed after redeem request\n"
 
     log("V2EX redeem response did not contain a success or already-claimed marker")
     return False, message + "Fail to check in: redeem response was not successful\n"
@@ -148,7 +169,6 @@ def main() -> int:
     balance_time, balance_value = balance(headers)
     if not balance_time or not balance_value:
         log("V2EX balance parsing failed after successful redeem")
-        raise ValueError("V2EX balance parsing failed")
 
     send_tg_notification(message)
     return 0
