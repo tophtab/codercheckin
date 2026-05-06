@@ -245,7 +245,11 @@ Updated scheduler and runner logging for readable runtime status, moved default 
 
 ### Main Changes
 
-(Add details)
+- Compared Cookie Cloud and manually copied V2EX cookies without recording secrets; confirmed core login cookies matched and Python header passing preserved quoted cookie values.
+- Updated V2EX daily mission parsing to detect Chinese and English login pages, avoid logging once tokens, and classify post-redeem already-claimed pages as idempotent success.
+- Tightened Cookie Cloud host matching so unrelated subdomains are ignored and host-specific duplicate cookie names win.
+- Added focused tests for V2EX page-state classification, secret-safe logging, and Cookie Cloud host selection.
+- Recorded the Cookie Cloud host-selection contract in backend quality guidelines.
 
 ### Git Commits
 
@@ -256,7 +260,9 @@ Updated scheduler and runner logging for readable runtime status, moved default 
 
 ### Testing
 
-- [OK] (Add test results)
+- [OK] `python3 -m compileall cookiecloud v2ex tests`
+- [OK] `pytest` (`40 passed`)
+- [OK] Live V2EX validation completed at `2026-05-06 09:10:46 +08:00`
 
 ### Status
 
@@ -429,6 +435,40 @@ Added process-timezone timestamp prefixes to CloudCheckin runtime logs, updated 
 - [OK] `python3 -m compileall attendance_checkin.py checkin_runner.py cookiecloud/client.py deepflood/deepflood.py nodeseek/nodeseek.py runtime_log.py run.py scheduler.py telegram/notify.py v2ex/v2ex.py tests`
 - [WARN] `python3 -m ruff check .` unavailable: `ruff` is not installed
 - [WARN] `python3 -m mypy .` unavailable: `mypy` is not installed
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 12: Fix V2EX check-in failure
+
+**Date**: 2026-05-06
+**Task**: Fix V2EX check-in failure
+**Branch**: `main`
+
+### Summary
+
+Fixed V2EX check-in classification and Cookie Cloud host-specific cookie handling; verified with unit tests, full pytest, and a live V2EX check-in.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `04e2aca` | (see git log) |
+| `15ff645` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
 
 ### Status
 

@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
-- **Last Active**: 2026-05-03
+- **Total Sessions**: 12
+- **Last Active**: 2026-05-06
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~429 | Active |
+| `journal-1.md` | ~473 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 12 | 2026-05-06 | Fix V2EX check-in failure | `04e2aca`, `15ff645` | `main` |
 | 11 | 2026-05-03 | Add timestamped runtime logs | `e695522`, `527eac8` | `main` |
 | 10 | 2026-05-02 | Optimize README deployment guide | `bbf299b` | `main` |
 | 9 | 2026-05-02 | Startup cookie validation | `e4a44fe`, `1062e1c` | `main` |
