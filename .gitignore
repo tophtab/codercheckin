@@ -5,5 +5,10 @@ __pycache__/
 .venv-*/
 node_modules/
 .env
+
+# Trellis project memory and configuration are intended to be tracked:
+# .trellis/workflow.md, .trellis/config.yaml, .trellis/spec/,
+# .trellis/tasks/, and .trellis/workspace/.
+#
+# Trellis developer identity and runtime state are local-only.
 .trellis/.developer
-.trellis/workspace/

@@ -1,10 +1,14 @@
-# Developer identity (local only)
+# Tracked Trellis project knowledge:
+# workflow.md, config.yaml, spec/, tasks/, workspace/, scripts/,
+# .version, and .template-hashes.json.
+#
+# Local-only developer identity.
 .developer
 
-# Current task pointer (each dev works on different task)
+# Current task pointer (each developer works on different task).
 .current-task
 
-# Session/window scoped runtime state
+# Session/window scoped runtime state.
 .runtime/
 
 # Ralph Loop state file
@@ -15,18 +19,18 @@
 .agent-log
 .session-id
 
-# Task directory runtime files
+# Task directory runtime files.
 .plan-log
 
-# Atomic update temp files
+# Atomic update temp files.
 *.tmp
 
-# Update backup directories
+# Update backup directories.
 .backup-*
 
-# Conflict resolution temp files
+# Conflict resolution temp files.
 *.new
 
-# Python cache
+# Python cache.
 **/__pycache__/
 **/*.pyc
