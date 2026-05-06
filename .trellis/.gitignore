@@ -1,9 +1,10 @@
 # Tracked Trellis project knowledge:
 # workflow.md, config.yaml, spec/, tasks/, workspace/, scripts/,
-# .version, and .template-hashes.json.
-#
-# Local-only developer identity.
-.developer
+# .version, .template-hashes.json, and .developer.
+
+# Local-only runtime/session state:
+# current task pointer, window/session runtime files, agent state, temp files,
+# and backup snapshots.
 
 # Current task pointer (each developer works on different task).
 .current-task
