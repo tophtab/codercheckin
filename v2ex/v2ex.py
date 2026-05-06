@@ -11,6 +11,19 @@ from runtime_log import log
 from telegram.notify import send_tg_notification
 
 
+LOGIN_PAGE_MARKERS = (
+    "需要先登录",
+    "you need to sign in first to view this page",
+)
+ALREADY_CLAIMED_MARKERS = (
+    "每日登录奖励已领取",
+)
+REDEEM_SUCCESS_MARKERS = (
+    "已成功领取每日登录奖励",
+)
+ONCE_PATTERN = re.compile(r"redeem\?once=([^'\"&<\s]+)")
+
+
 def build_headers(cookie: str) -> dict[str, str]:
     return {
         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,"
@@ -38,29 +51,61 @@ def _fetch_page(url: str, headers: dict[str, str]) -> str:
     return response.text
 
 
+def _contains_marker(content: str, markers: tuple[str, ...]) -> bool:
+    lowered = content.lower()
+    return any(marker in lowered for marker in markers)
+
+
+def _is_login_page(content: str) -> bool:
+    return _contains_marker(content, LOGIN_PAGE_MARKERS)
+
+
+def _is_already_claimed_page(content: str) -> bool:
+    return _contains_marker(content, ALREADY_CLAIMED_MARKERS)
+
+
+def _is_redeem_success_page(content: str) -> bool:
+    return _contains_marker(content, REDEEM_SUCCESS_MARKERS)
+
+
 def get_once(headers: dict[str, str], message: str) -> tuple[str | None, bool, str]:
     content = _fetch_page("https://www.v2ex.com/mission/daily", headers)
 
-    if re.search(r"需要先登录", content):
-        return None, False, message + "The cookie is overdated."
+    if _is_login_page(content):
+        log("V2EX daily mission page indicates the cookie is unauthenticated")
+        return None, False, message + "The cookie is unauthenticated or expired.\n"
 
-    if re.search(r"每日登录奖励已领取", content):
+    if _is_already_claimed_page(content):
         return None, True, message + "You have already signed today.\n"
 
-    once_match = re.search(r"redeem\?once=(.*?)'", content)
+    once_match = ONCE_PATTERN.search(content)
     if once_match:
-        return once_match.group(1), False, message + f"Successfully get once {once_match.group(1)}\n"
+        return once_match.group(1), False, message + "Successfully got once token\n"
 
+    log("V2EX daily mission page loaded but no redeem once token was found")
     return None, False, message + "Have not signed, but fail to get once\n"
 
 
 def check_in(once: str, headers: dict[str, str], message: str) -> tuple[bool, str]:
-    content = _fetch_page(f"https://www.v2ex.com/mission/daily/redeem?once={once}", headers)
+    try:
+        content = _fetch_page(f"https://www.v2ex.com/mission/daily/redeem?once={once}", headers)
+    except Exception as exc:
+        log(f"V2EX redeem request failed before response classification: {type(exc).__name__}")
+        return False, message + "Fail to check in: redeem request failed before response classification\n"
 
-    if re.search(r"已成功领取每日登录奖励", content):
+    if _is_redeem_success_page(content):
         return True, message + "Check in successfully\n"
 
-    return False, message + "Fail to check in\n"
+    if _is_already_claimed_page(content):
+        log("V2EX redeem response indicates the daily reward was already claimed")
+        return True, message + "Daily reward was already claimed after redeem request\n"
+
+    if _is_login_page(content):
+        log("V2EX redeem response indicates the cookie is unauthenticated")
+        return False, message + "Fail to check in: cookie is unauthenticated or expired\n"
+
+    log("V2EX redeem response did not contain a success or already-claimed marker")
+    return False, message + "Fail to check in: redeem response was not successful\n"
 
 
 def balance(headers: dict[str, str]) -> tuple[str | None, str | None]:
@@ -93,16 +138,17 @@ def main() -> int:
 
     if not once:
         send_tg_notification(message + "FAIL.\n")
-        raise ValueError("Fail to check in")
+        raise ValueError("V2EX daily mission page did not provide a redeem once token")
 
     success, message = check_in(once, headers, message)
     if not success:
         send_tg_notification(message)
-        raise ValueError("Fail to check in")
+        raise ValueError("V2EX redeem request did not complete successfully")
 
     balance_time, balance_value = balance(headers)
     if not balance_time or not balance_value:
-        raise ValueError("Fail to get balance")
+        log("V2EX balance parsing failed after successful redeem")
+        raise ValueError("V2EX balance parsing failed")
 
     send_tg_notification(message)
     return 0

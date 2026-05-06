@@ -57,7 +57,7 @@ def _get_cookiecloud_cookie(domains: list[str]) -> str:
         return ""
 
     merged = {}
-    for host in matched_hosts:
+    for host in _sort_hosts_by_specificity(matched_hosts):
         for item in cookie_data.get(host, []):
             name = str(item.get("name", "")).strip()
             value = str(item.get("value", ""))
@@ -230,11 +230,16 @@ def _find_matching_hosts(cookie_data: dict, domains: list[str]) -> list[str]:
 
 
 def _domain_matches(host: str, domain: str) -> bool:
-    return (
-        host == domain
-        or host.endswith(f".{domain}")
-        or domain.endswith(f".{host}")
-    )
+    return host == domain or domain.endswith(f".{host}")
+
+
+def _sort_hosts_by_specificity(hosts: list[str]) -> list[str]:
+    return sorted(hosts, key=lambda host: _host_specificity(_normalize_domain(host)))
+
+
+def _host_specificity(host: str) -> tuple[int, int, str]:
+    labels = [label for label in host.split(".") if label]
+    return len(labels), len(host), host
 
 
 def _normalize_domain(value: str) -> str:

@@ -79,6 +79,13 @@ Examples:
 - Cookie Cloud configuration uses environment variables only:
   `COOKIE_CLOUD_URL`, `COOKIE_CLOUD_UUID`, `COOKIE_CLOUD_PASSWORD`, `COOKIE_CLOUD_CRYPTO_TYPE`
 - The shared resolver returns a request-ready cookie header string in `name=value; name2=value2` form.
+- Cookie Cloud domain matching must not treat arbitrary subdomains as matches
+  for a requested registrable domain. A host matches when it is exactly one of
+  the requested domains, or when the requested domain is a child of the Cookie
+  Cloud cookie host.
+- When Cookie Cloud returns duplicate cookie names from multiple matching hosts,
+  the most specific matching host wins. For example, `www.v2ex.com` must
+  override `v2ex.com` for the same cookie name when both hosts are requested.
 - The scheduler must validate cookie availability for every configured
   `CHECKIN_TARGETS` target before entering the wait loop.
 - Startup validation may accept a non-empty direct platform cookie or a matching
@@ -110,6 +117,8 @@ Examples:
 |----------|-------------------|
 | Direct platform cookie is set | Use it immediately and skip Cookie Cloud |
 | Direct platform cookie missing, Cookie Cloud configured, matching domain found | Use Cookie Cloud cookie and print a safe success hint |
+| Cookie Cloud returns duplicate names for `v2ex.com` and `www.v2ex.com` | Build one cookie header where the `www.v2ex.com` value wins for duplicated names |
+| Cookie Cloud returns cookies only for an unrelated subdomain such as `api.v2ex.com` | Do not use those cookies for a `v2ex.com` / `www.v2ex.com` lookup |
 | Direct platform cookie missing, Cookie Cloud not configured | Return empty string and let the platform entrypoint raise `ValueError` |
 | Cookie Cloud request fails or returns bad JSON | Print a safe error, return empty string, and let the platform entrypoint fail fast |
 | Scheduler startup target has direct cookie or Cookie Cloud match | Log the safe cookie source and continue to scheduling |
@@ -146,6 +155,8 @@ Examples:
 - Validate startup cookie checks with direct-cookie success, Cookie Cloud
   success, missing-cookie failure, no raw secret output, and scheduler fail-fast
   behavior before the wait loop.
+- Validate Cookie Cloud duplicate cookie names across parent and host-specific
+  domains, and validate that unrelated subdomain cookies are ignored.
 - Validate runner target logs by stubbing subprocess execution and asserting
   per-target start, success, failure, and first-failure stop behavior.
 - Validate failed runner subprocesses still forward stdout/stderr and include a

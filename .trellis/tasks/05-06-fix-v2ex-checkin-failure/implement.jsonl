@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Cookie Cloud, platform entrypoint, and test requirements for backend automation changes."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "V2EX failure handling must preserve useful operational context and non-zero exits."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "New diagnostics must use timestamped runtime logs and avoid secrets."}
