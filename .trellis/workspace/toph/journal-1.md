@@ -477,3 +477,36 @@ Fixed V2EX check-in classification and Cookie Cloud host-specific cookie handlin
 ### Next Steps
 
 - None - task complete
+
+
+## Session 13: Improve V2EX redeem confirmation
+
+**Date**: 2026-05-06
+**Task**: Improve V2EX redeem confirmation
+**Branch**: `main`
+
+### Summary
+
+Updated V2EX daily mission flow to confirm success from the final mission page, treat balance parsing as supplemental, added regression tests, and committed related Trellis workflow/platform updates.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8229b07` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
