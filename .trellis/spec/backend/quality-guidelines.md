@@ -67,6 +67,7 @@ Examples:
 - Docker Hub publish workflow: `.github/workflows/dockerhub-publish.yml`
 - Deployment compose file: `docker-compose.yml`
 - Local build override file: `docker-compose.build.yml`
+- Docker build context ignore file: `.dockerignore`
 
 ### 3. Contracts
 
@@ -112,6 +113,10 @@ Examples:
 - Optional GitHub repository variable `DOCKERHUB_IMAGE` overrides the default image name.
 - If `DOCKERHUB_IMAGE` is empty, the workflow publishes to `<DOCKERHUB_USERNAME>/cloudcheckin`.
 - The publish workflow runs automatically on pushes to `main`, pushes of `v*` git tags, and manual dispatch.
+- Because the Dockerfile uses `COPY . .`, `.dockerignore` must exclude local
+  secrets, agent/editor tooling, Trellis metadata, test-only files, caches,
+  virtualenvs, packaging artifacts, local compose files, and build helper
+  directories that are not needed by the runtime scheduler image.
 
 ### 4. Validation & Error Matrix
 
@@ -135,6 +140,7 @@ Examples:
 | `TZ` is invalid | `scheduler.py` exits non-zero before entering the loop |
 | Server runs `docker compose` with default files | Compose pulls `CLOUDCHECKIN_IMAGE` instead of building locally |
 | Local developer needs to build current source | Compose uses `docker-compose.build.yml` as an explicit override |
+| Docker image is built from the repository root | `/app` contains runtime Python modules and `requirements.txt`, but not `.env`, `.agents`, `.codex`, `.claude`, `.cursor`, `.trellis`, `.venv`, `.pytest_cache`, or `tests` |
 | Docker Hub username/token missing | Workflow fails in login or image resolution before build/push |
 | `DOCKERHUB_IMAGE` contains uppercase letters | Workflow lowercases the final image name before metadata/build |
 
@@ -171,6 +177,9 @@ Examples:
 - Validate platform module imports do not trigger check-in side effects.
 - Validate deployment compose wiring with `docker compose config` after providing a local `.env` file copied from `.env.localtest.example`.
 - Validate local build override wiring with `docker compose -f docker-compose.yml -f docker-compose.build.yml config`.
+- Validate Docker build context hygiene with a local image build and an image
+  contents check that confirms runtime files are present and ignored
+  development, cache, test, metadata, and secret paths are absent from `/app`.
 - Validate GitHub Actions workflow syntax with `actionlint`.
 - When real credentials are available, run the affected module with `python -m ...`, `python run.py`, or the long-running container and assert the correct cookie source is used.
 

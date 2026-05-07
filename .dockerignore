@@ -1,9 +1,51 @@
+# Local secrets and environment files
 .env
-.git
-.github
-.trellis
+.env.*
+
+# VCS, CI, and project/agent tooling metadata
+.git/
+.gitignore
+.github/
+.circleci/
+.trellis/
+.agents/
+.codex/
+.claude/
+.cursor/
+AGENTS.md
+README.md
+
+# Python caches, local environments, and build artifacts
 __pycache__/
-*/__pycache__/
-*.pyc
+**/__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+.venv-*/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# JavaScript/vendor caches that are never needed in the runtime image
 node_modules/
 
+# Test-only files
+tests/
+pytest.ini
+
+# Local Docker and packaging helpers not needed at runtime
+Dockerfile
+.dockerignore
+docker-compose*.yml
+compose*.yml
+pyproject.toml
+scripts/
+cloudflareworkers/
