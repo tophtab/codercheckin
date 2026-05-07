@@ -576,3 +576,36 @@ Stopped ignoring .trellis/.developer, kept runtime session files ignored, and re
 ### Next Steps
 
 - None - task complete
+
+
+## Session 16: Continue check-in targets after failures
+
+**Date**: 2026-05-07
+**Task**: Continue check-in targets after failures
+**Branch**: `main`
+
+### Summary
+
+Changed the check-in runner to attempt all configured targets before reporting failures, added aggregate failure handling and regression tests, and updated backend quality specs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a7e20ba` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
