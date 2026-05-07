@@ -5,6 +5,7 @@ import sys
 import pytest
 
 from checkin_runner import (
+    MultipleTargetExecutionError,
     RECENT_OUTPUT_LINE_LIMIT,
     TargetExecutionError,
     parse_targets,
@@ -144,14 +145,17 @@ def test_run_targets_raises_failure_with_target_context(
 
     def fake_popen(command: list[str], **kwargs: object) -> FakeProcess:
         calls.append(command)
-        return FakeProcess(command, 7)
+        return FakeProcess(command, 7 if command[-1] == "v2ex.v2ex" else 0)
 
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     with pytest.raises(TargetExecutionError) as excinfo:
         run_targets(["v2ex", "deepflood"])
 
-    assert calls == [[sys.executable, "-m", "v2ex.v2ex"]]
+    assert calls == [
+        [sys.executable, "-m", "v2ex.v2ex"],
+        [sys.executable, "-m", "deepflood.deepflood"],
+    ]
     assert excinfo.value.target == "v2ex"
     assert excinfo.value.returncode == 7
 
@@ -160,7 +164,41 @@ def test_run_targets_raises_failure_with_target_context(
     assert "Check-in target 'v2ex' failed with exit code 7" in output
     assert "Recent output from failed target 'v2ex':" in output
     assert "  (no stdout/stderr output captured)" in output
-    assert "Starting check-in target 'deepflood'" not in output
+    assert "Starting check-in target 'deepflood' (deepflood.deepflood)" in output
+    assert "Check-in target 'deepflood' succeeded" in output
+
+
+def test_run_targets_continues_to_v2ex_after_deepflood_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_popen(command: list[str], **kwargs: object) -> FakeProcess:
+        calls.append(command)
+        if command[-1] == "deepflood.deepflood":
+            return FakeProcess(command, 9, stderr_text="security challenge\n")
+        return FakeProcess(command, 0)
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+
+    with pytest.raises(TargetExecutionError) as excinfo:
+        run_targets(["nodeseek", "deepflood", "v2ex"])
+
+    assert calls == [
+        [sys.executable, "-m", "nodeseek.nodeseek"],
+        [sys.executable, "-m", "deepflood.deepflood"],
+        [sys.executable, "-m", "v2ex.v2ex"],
+    ]
+    assert excinfo.value.target == "deepflood"
+    assert excinfo.value.returncode == 9
+
+    output = capsys.readouterr().out
+    assert "Check-in target 'nodeseek' succeeded" in output
+    assert "Check-in target 'deepflood' failed with exit code 9" in output
+    assert "  [stderr] security challenge" in output
+    assert "Starting check-in target 'v2ex' (v2ex.v2ex)" in output
+    assert "Check-in target 'v2ex' succeeded" in output
 
 
 def test_run_targets_forwards_output_and_summarizes_recent_failure(
@@ -171,19 +209,24 @@ def test_run_targets_forwards_output_and_summarizes_recent_failure(
 
     def fake_popen(command: list[str], **kwargs: object) -> FakeProcess:
         calls.append(command)
-        return FakeProcess(
-            command,
-            7,
-            stdout_text="opening v2ex\nfailed step: daily mission\n",
-            stderr_text="actual error string: cookie expired\n",
-        )
+        if command[-1] == "v2ex.v2ex":
+            return FakeProcess(
+                command,
+                7,
+                stdout_text="opening v2ex\nfailed step: daily mission\n",
+                stderr_text="actual error string: cookie expired\n",
+            )
+        return FakeProcess(command, 0)
 
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     with pytest.raises(TargetExecutionError) as excinfo:
         run_targets(["v2ex", "deepflood"])
 
-    assert calls == [[sys.executable, "-m", "v2ex.v2ex"]]
+    assert calls == [
+        [sys.executable, "-m", "v2ex.v2ex"],
+        [sys.executable, "-m", "deepflood.deepflood"],
+    ]
 
     captured = capsys.readouterr()
     assert "opening v2ex" in captured.out
@@ -192,11 +235,38 @@ def test_run_targets_forwards_output_and_summarizes_recent_failure(
     assert "Recent output from failed target 'v2ex':" in captured.out
     assert "  [stdout] failed step: daily mission" in captured.out
     assert "  [stderr] actual error string: cookie expired" in captured.out
-    assert "Starting check-in target 'deepflood'" not in captured.out
+    assert "Starting check-in target 'deepflood' (deepflood.deepflood)" in captured.out
+    assert "Check-in target 'deepflood' succeeded" in captured.out
     message = str(excinfo.value)
     assert "Check-in target 'v2ex' failed with exit code 7" in message
     assert "  [stdout] failed step: daily mission" in message
     assert "  [stderr] actual error string: cookie expired" in message
+
+
+def test_run_targets_raises_aggregate_failure_for_multiple_failed_targets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_popen(command: list[str], **kwargs: object) -> FakeProcess:
+        if command[-1] == "deepflood.deepflood":
+            return FakeProcess(command, 9, stderr_text="challenge blocked\n")
+        return FakeProcess(command, 7, stdout_text=f"{command[-1]} failed\n")
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+
+    with pytest.raises(MultipleTargetExecutionError) as excinfo:
+        run_targets(["v2ex", "deepflood"])
+
+    assert isinstance(excinfo.value, TargetExecutionError)
+    assert [failure.target for failure in excinfo.value.failures] == [
+        "v2ex",
+        "deepflood",
+    ]
+    message = str(excinfo.value)
+    assert "2 check-in targets failed:" in message
+    assert "Check-in target 'v2ex' failed with exit code 7" in message
+    assert "  [stdout] v2ex.v2ex failed" in message
+    assert "Check-in target 'deepflood' failed with exit code 9" in message
+    assert "  [stderr] challenge blocked" in message
 
 
 def test_run_targets_exception_message_uses_bounded_recent_output(
@@ -226,14 +296,23 @@ def test_run_targets_wraps_subprocess_start_failures_with_target_context(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    calls: list[list[str]] = []
+
     def fake_popen(command: list[str], **kwargs: object) -> FakeProcess:
-        raise OSError("exec format error")
+        calls.append(command)
+        if command[-1] == "v2ex.v2ex":
+            raise OSError("exec format error")
+        return FakeProcess(command, 0)
 
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     with pytest.raises(TargetExecutionError) as excinfo:
         run_targets(["v2ex", "deepflood"])
 
+    assert calls == [
+        [sys.executable, "-m", "v2ex.v2ex"],
+        [sys.executable, "-m", "deepflood.deepflood"],
+    ]
     assert excinfo.value.target == "v2ex"
     assert excinfo.value.returncode is None
 
@@ -241,7 +320,8 @@ def test_run_targets_wraps_subprocess_start_failures_with_target_context(
     assert "Starting check-in target 'v2ex' (v2ex.v2ex)" in output
     assert "Check-in target 'v2ex' failed before it could start" in output
     assert "Failed to start module 'v2ex.v2ex': exec format error" in output
-    assert "Starting check-in target 'deepflood'" not in output
+    assert "Starting check-in target 'deepflood' (deepflood.deepflood)" in output
+    assert "Check-in target 'deepflood' succeeded" in output
 
     message = str(excinfo.value)
     assert "Check-in target 'v2ex' failed before it could start" in message

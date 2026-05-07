@@ -97,12 +97,14 @@ Examples:
 - `CHECKIN_CRON` must be a valid 5-field cron expression.
 - `TZ` must be a valid IANA timezone name accepted by `zoneinfo`.
 - `run_targets()` must execute configured targets in order, print each target's
-  start and success/failure result, stop at the first non-zero subprocess exit,
-  and raise an exception that names the failing target and includes a bounded
-  recent stdout/stderr summary.
+  start and success/failure result, continue after failed targets, and raise
+  after all configured targets have been attempted when any target failed.
 - `run_targets()` must also wrap subprocess start failures with the failing
-  target/module context and a bounded recent output summary, then stop before
-  later targets run.
+  target/module context and a bounded recent output summary, then continue with
+  later configured targets.
+- The final `run_targets()` exception must preserve useful failed-target
+  context. When multiple targets fail, it must make the aggregate failure clear
+  and summarize each failed target instead of hiding all but the first failure.
 - `run_targets()` must forward target subprocess stdout/stderr while the target
   runs and, on failure, print a bounded recent stdout/stderr summary without
   introducing new secret sources beyond the subprocess output itself.
@@ -124,8 +126,8 @@ Examples:
 | Scheduler startup target has direct cookie or Cookie Cloud match | Log the safe cookie source and continue to scheduling |
 | Scheduler startup target has no direct cookie and no Cookie Cloud match | Exit non-zero before logging the next scheduled run |
 | `CHECKIN_TARGETS` contains unsupported names | `run.py` exits non-zero with the supported target list |
-| A check-in target subprocess exits non-zero | `run_targets()` logs the target failure, raises an exception with the failing target and recent stdout/stderr text, and does not run later targets |
-| A check-in target subprocess cannot start | `run_targets()` raises a target-specific exception that preserves the module/startup error text and does not run later targets |
+| A check-in target subprocess exits non-zero | `run_targets()` logs the target failure, continues to later targets, then raises after all targets have been attempted |
+| A check-in target subprocess cannot start | `run_targets()` logs a target-specific failure that preserves the module/startup error text, continues to later targets, then raises after all targets have been attempted |
 | Platform reports "already checked in" | Treat as a successful, idempotent run instead of failing the batch |
 | Platform JSON returns `success: false` | Treat as a business failure even if HTTP status is `200`, unless the message is an idempotent already-checked-in response |
 | Platform module is imported by tests or tooling | Import succeeds without cookie lookup, sleeps, HTTP requests, or Telegram sends |
@@ -158,11 +160,13 @@ Examples:
 - Validate Cookie Cloud duplicate cookie names across parent and host-specific
   domains, and validate that unrelated subdomain cookies are ignored.
 - Validate runner target logs by stubbing subprocess execution and asserting
-  per-target start, success, failure, and first-failure stop behavior.
+  per-target start, success, failure, and continue-after-failure behavior.
 - Validate failed runner subprocesses still forward stdout/stderr and include a
   recent failure-output summary.
 - Validate subprocess start failures are wrapped with the failing target/module
-  context and stop later targets.
+  context and do not stop later targets.
+- Validate multiple target failures raise an aggregate message that summarizes
+  every failed target.
 - Validate shared attendance behavior with isolated tests for multi-account cookies, request timeout propagation, and business failure responses.
 - Validate platform module imports do not trigger check-in side effects.
 - Validate deployment compose wiring with `docker compose config` after providing a local `.env` file copied from `.env.localtest.example`.
@@ -239,6 +243,30 @@ validate_target_cookies(targets)
 while True:
     sleep_until(next_run)
     run_targets(targets)
+```
+
+Do not stop the target loop at the first failed subprocess:
+
+```python
+for target in targets:
+    returncode = run_target(target)
+    if returncode != 0:
+        raise TargetExecutionError(target=target, returncode=returncode)
+```
+
+Instead, collect target failures, continue with later configured targets, and
+raise only after the full target list has been attempted:
+
+```python
+failures = []
+for target in targets:
+    returncode = run_target(target)
+    if returncode != 0:
+        failures.append(TargetExecutionError(target=target, returncode=returncode))
+        continue
+
+if failures:
+    raise failures[0] if len(failures) == 1 else MultipleTargetExecutionError(failures)
 ```
 
 ---

@@ -55,6 +55,19 @@ class TargetExecutionError(RuntimeError):
         super().__init__(_format_failure_message(target, returncode, recent_output))
 
 
+class MultipleTargetExecutionError(TargetExecutionError):
+    def __init__(self, failures: list[TargetExecutionError]) -> None:
+        if not failures:
+            raise ValueError("MultipleTargetExecutionError requires at least one failure")
+
+        self.failures = list(failures)
+        first_failure = failures[0]
+        self.target = first_failure.target
+        self.returncode = first_failure.returncode
+        self.recent_output = list(first_failure.recent_output)
+        RuntimeError.__init__(self, _format_multiple_failure_message(failures))
+
+
 def parse_targets() -> list[str]:
     raw_targets = os.environ.get(
         "CHECKIN_TARGETS",
@@ -189,6 +202,19 @@ def _format_failure_message(
     )
 
 
+def _format_multiple_failure_message(failures: list[TargetExecutionError]) -> str:
+    sections: list[str] = [f"{len(failures)} check-in targets failed:"]
+    for failure in failures:
+        sections.append(
+            _format_failure_message(
+                failure.target,
+                failure.returncode,
+                failure.recent_output,
+            )
+        )
+    return "\n\n".join(sections)
+
+
 def _format_failure_summary(target: str, returncode: int | None) -> str:
     if returncode is None:
         return f"Check-in target '{target}' failed before it could start"
@@ -203,6 +229,8 @@ def _print_failure_output(target: str, recent_output: list[tuple[str, str]]) -> 
 
 
 def run_targets(targets: list[str]) -> int:
+    failures: list[TargetExecutionError] = []
+
     for target in targets:
         module_name = TARGETS[target].module_name
         log(f"Starting check-in target '{target}' ({module_name})")
@@ -211,7 +239,8 @@ def run_targets(targets: list[str]) -> int:
         except TargetExecutionError as err:
             log(_format_failure_summary(err.target, err.returncode))
             _print_failure_output(err.target, err.recent_output)
-            raise
+            failures.append(err)
+            continue
         if returncode != 0:
             error = TargetExecutionError(
                 target=target,
@@ -220,6 +249,13 @@ def run_targets(targets: list[str]) -> int:
             )
             log(_format_failure_summary(error.target, error.returncode))
             _print_failure_output(error.target, error.recent_output)
-            raise error
+            failures.append(error)
+            continue
         log(f"Check-in target '{target}' succeeded")
+
+    if len(failures) == 1:
+        raise failures[0]
+    if failures:
+        raise MultipleTargetExecutionError(failures)
+
     return 0
