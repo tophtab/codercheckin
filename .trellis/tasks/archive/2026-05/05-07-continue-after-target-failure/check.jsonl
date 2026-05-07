@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend spec index for verifying the runner change."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Check raised error types/messages preserve caller compatibility and useful failure context."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Check logs still capture per-target failures and final run status."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Check tests and quality gate coverage for the new behavior."}

@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend spec index for relevant project guidelines before changing runner behavior."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Error semantics matter because target failures are raised after all targets are attempted."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Runner failure and success logs must remain clear and consistent."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Unit tests and code quality expectations for the behavior change."}
