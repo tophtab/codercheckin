@@ -1,10 +1,28 @@
+# Python caches, test artifacts, and package build outputs
 __pycache__/
-*/__pycache__
+**/__pycache__/
+*.py[cod]
+*$py.class
 *.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Local virtual environments
 .venv/
 .venv-*/
+venv/
+env/
 node_modules/
+
+# Local secrets. Keep the checked-in local-test example available.
 .env
+.env.*
+!.env.localtest.example
 
 # Trellis project memory and configuration are intended to be tracked:
 # .trellis/workflow.md, .trellis/config.yaml, .trellis/spec/,

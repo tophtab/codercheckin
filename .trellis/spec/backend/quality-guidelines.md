@@ -67,6 +67,7 @@ Examples:
 - Docker Hub publish workflow: `.github/workflows/dockerhub-publish.yml`
 - Deployment compose file: `docker-compose.yml`
 - Local build override file: `docker-compose.build.yml`
+- Git ignore file: `.gitignore`
 - Docker build context ignore file: `.dockerignore`
 
 ### 3. Contracts
@@ -117,6 +118,11 @@ Examples:
   secrets, agent/editor tooling, Trellis metadata, test-only files, caches,
   virtualenvs, packaging artifacts, local compose files, and build helper
   directories that are not needed by the runtime scheduler image.
+- `.gitignore` must keep local secrets, Python caches, pytest/mypy/ruff caches,
+  virtualenvs, coverage output, package metadata, and build outputs out of git
+  history, while keeping checked-in examples such as `.env.localtest.example`.
+- `tests/` is repository quality infrastructure: keep it tracked and exclude it
+  from runtime Docker images instead of deleting it from the repository.
 
 ### 4. Validation & Error Matrix
 
@@ -141,6 +147,7 @@ Examples:
 | Server runs `docker compose` with default files | Compose pulls `CLOUDCHECKIN_IMAGE` instead of building locally |
 | Local developer needs to build current source | Compose uses `docker-compose.build.yml` as an explicit override |
 | Docker image is built from the repository root | `/app` contains runtime Python modules and `requirements.txt`, but not `.env`, `.agents`, `.codex`, `.claude`, `.cursor`, `.trellis`, `.venv`, `.pytest_cache`, or `tests` |
+| Local generated/cache directories exist after development or tests | They are ignored by git and may be deleted locally; source tests remain tracked |
 | Docker Hub username/token missing | Workflow fails in login or image resolution before build/push |
 | `DOCKERHUB_IMAGE` contains uppercase letters | Workflow lowercases the final image name before metadata/build |
 
@@ -180,6 +187,9 @@ Examples:
 - Validate Docker build context hygiene with a local image build and an image
   contents check that confirms runtime files are present and ignored
   development, cache, test, metadata, and secret paths are absent from `/app`.
+- Validate repository cleanup with `git status --ignored` or targeted `git
+  ls-files` checks when changing ignore rules, and do not remove tracked tests
+  as a substitute for excluding them from the runtime image.
 - Validate GitHub Actions workflow syntax with `actionlint`.
 - When real credentials are available, run the affected module with `python -m ...`, `python run.py`, or the long-running container and assert the correct cookie source is used.
 
