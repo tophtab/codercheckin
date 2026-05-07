@@ -609,3 +609,37 @@ Changed the check-in runner to attempt all configured targets before reporting f
 ### Next Steps
 
 - None - task complete
+
+
+## Session 17: Harden Docker and repo ignore boundaries
+
+**Date**: 2026-05-07
+**Task**: Harden Docker and repo ignore boundaries
+**Branch**: `main`
+
+### Summary
+
+Tightened Docker build context to exclude non-runtime files, verified GitHub Docker builds use .dockerignore, cleaned local generated artifacts, expanded .gitignore, and documented repository cleanup rules.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f247fc0` | (see git log) |
+| `48d9b5b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

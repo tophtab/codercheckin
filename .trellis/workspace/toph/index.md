@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 16
+- **Total Sessions**: 17
 - **Last Active**: 2026-05-07
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~611 | Active |
+| `journal-1.md` | ~645 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 17 | 2026-05-07 | Harden Docker and repo ignore boundaries | `f247fc0`, `48d9b5b` | `main` |
 | 16 | 2026-05-07 | Continue check-in targets after failures | `a7e20ba` | `main` |
 | 15 | 2026-05-06 | Track Trellis developer file | `44ee585` | `main` |
 | 14 | 2026-05-06 | Optimize Trellis gitignore boundaries | `2daa005` | `main` |
