@@ -742,3 +742,36 @@ Added BuildKit GitHub Actions cache settings to the Docker Hub publish workflow 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 21: Review and commit Trellis agent workflow update
+
+**Date**: 2026-05-08
+**Task**: Review and commit Trellis agent workflow update
+**Branch**: `main`
+
+### Summary
+
+Reviewed leftover dirty Trellis and agent configuration changes, verified they match Trellis 0.5.7 generated templates, committed them separately from the Docker workflow work, and confirmed the working tree is clean.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `96a000c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
