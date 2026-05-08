@@ -676,3 +676,36 @@ Reworked V2EX check-in around curl_cffi Docker/NAS flow, removed CI/CD and Cloud
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: Restore Docker Hub publish workflow
+
+**Date**: 2026-05-08
+**Task**: Restore Docker Hub publish workflow
+**Branch**: `main`
+
+### Summary
+
+Added GitHub Actions workflow to build and push the Docker Hub image, updated backend spec to document the Actions-to-Docker-Hub-to-NAS compose pull release path, validated with actionlint and pytest.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1f0ce6c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
