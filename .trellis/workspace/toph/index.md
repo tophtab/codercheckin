@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 19
+- **Total Sessions**: 20
 - **Last Active**: 2026-05-08
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~711 | Active |
+| `journal-1.md` | ~744 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 20 | 2026-05-08 | Add Docker workflow cache | `2373ebf` | `main` |
 | 19 | 2026-05-08 | Restore Docker Hub publish workflow | `1f0ce6c` | `main` |
 | 18 | 2026-05-08 | Rework V2EX Docker check-in flow | `2809c77` | `main` |
 | 17 | 2026-05-07 | Harden Docker and repo ignore boundaries | `f247fc0`, `48d9b5b` | `main` |

@@ -709,3 +709,36 @@ Added GitHub Actions workflow to build and push the Docker Hub image, updated ba
 ### Next Steps
 
 - None - task complete
+
+
+## Session 20: Add Docker workflow cache
+
+**Date**: 2026-05-08
+**Task**: Add Docker workflow cache
+**Branch**: `main`
+
+### Summary
+
+Added BuildKit GitHub Actions cache settings to the Docker Hub publish workflow and validated the workflow with actionlint.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2373ebf` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
