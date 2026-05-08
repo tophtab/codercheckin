@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 21
+- **Total Sessions**: 22
 - **Last Active**: 2026-05-08
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~777 | Active |
+| `journal-1.md` | ~810 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 22 | 2026-05-08 | Slim Docker image build | `1189d97` | `main` |
 | 21 | 2026-05-08 | Review and commit Trellis agent workflow update | `96a000c` | `main` |
 | 20 | 2026-05-08 | Add Docker workflow cache | `2373ebf` | `main` |
 | 19 | 2026-05-08 | Restore Docker Hub publish workflow | `1f0ce6c` | `main` |

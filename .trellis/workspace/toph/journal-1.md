@@ -775,3 +775,36 @@ Reviewed leftover dirty Trellis and agent configuration changes, verified they m
 ### Next Steps
 
 - None - task complete
+
+
+## Session 22: Slim Docker image build
+
+**Date**: 2026-05-08
+**Task**: Slim Docker image build
+**Branch**: `main`
+
+### Summary
+
+Removed runtime-unneeded pip self-upgrade, disabled dependency bytecode compilation, cleaned Python bytecode caches from the Docker image layer, and recorded the low-risk Docker slimming convention in backend quality specs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1189d97` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
