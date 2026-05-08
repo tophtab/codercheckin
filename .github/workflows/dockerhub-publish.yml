@@ -1,0 +1,84 @@
+name: Publish Docker Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dockerhub:
+    name: Build and publish Docker Hub image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve Docker Hub image
+        id: image
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
+        run: |
+          missing=0
+
+          if [ -z "$DOCKERHUB_USERNAME" ]; then
+            echo "::error::Missing required secret DOCKERHUB_USERNAME."
+            missing=1
+          fi
+
+          if [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "::error::Missing required secret DOCKERHUB_TOKEN."
+            missing=1
+          fi
+
+          if [ -n "$DOCKERHUB_IMAGE" ]; then
+            image_name="$DOCKERHUB_IMAGE"
+          elif [ -n "$DOCKERHUB_USERNAME" ]; then
+            image_name="$DOCKERHUB_USERNAME/cloudcheckin"
+          else
+            echo "::error::Set vars.DOCKERHUB_IMAGE or secret DOCKERHUB_USERNAME to resolve the Docker Hub image name."
+            missing=1
+          fi
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          image_name="$(printf '%s' "$image_name" | tr '[:upper:]' '[:lower:]')"
+          echo "name=$image_name" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+            type=ref,event=tag
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

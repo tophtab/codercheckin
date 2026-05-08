@@ -109,11 +109,13 @@ Examples:
 - `run_targets()` must forward target subprocess stdout/stderr while the target
   runs and, on failure, print a bounded recent stdout/stderr summary without
   introducing new secret sources beyond the subprocess output itself.
-- Docker Compose on the NAS or local host is the supported deployment contract.
-- GitHub Actions, CircleCI, and Cloudflare Workers are out of scope for this
-  repository and should not be reintroduced as tracked deployment files.
-- Docker image publishing, if needed, is an external/manual release concern, not
-  a repository CI/CD workflow contract.
+- Docker Compose on the NAS or local host is the supported runtime deployment
+  contract.
+- GitHub Actions is the supported Docker image publishing contract: build the
+  repository image from `Dockerfile`, push it to Docker Hub, then update the NAS
+  with `docker compose pull` and `docker compose up -d`.
+- CircleCI and Cloudflare Workers are out of scope for this repository and
+  should not be reintroduced as tracked deployment files.
 - Because the Dockerfile uses `COPY . .`, `.dockerignore` must exclude local
   secrets, agent/editor tooling, Trellis metadata, test-only files, caches,
   virtualenvs, packaging artifacts, local compose files, and build helper
@@ -148,8 +150,8 @@ Examples:
 | Local developer needs to build current source | Compose uses `docker-compose.build.yml` as an explicit override |
 | Docker image is built from the repository root | `/app` contains runtime Python modules and `requirements.txt`, but not `.env`, `.agents`, `.codex`, `.claude`, `.cursor`, `.trellis`, `.venv`, `.pytest_cache`, or `tests` |
 | Local generated/cache directories exist after development or tests | They are ignored by git and may be deleted locally; source tests remain tracked |
-| CI/CD or Worker deployment files are proposed | Reject them as out of scope for the Docker/NAS deployment contract |
-| Docker image publication is needed | Handle it outside the repository's tracked CI/CD files |
+| Docker image publication is needed | Use the GitHub Actions Docker Hub publish workflow with Docker Hub secrets and no checked-in credentials |
+| CircleCI or Worker deployment files are proposed | Reject them as out of scope for the Docker/NAS deployment contract |
 
 ### 5. Good / Base / Bad Cases
 
