@@ -643,3 +643,36 @@ Tightened Docker build context to exclude non-runtime files, verified GitHub Doc
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: Rework V2EX Docker check-in flow
+
+**Date**: 2026-05-08
+**Task**: Rework V2EX Docker check-in flow
+**Branch**: `main`
+
+### Summary
+
+Reworked V2EX check-in around curl_cffi Docker/NAS flow, removed CI/CD and Cloudflare Worker artifacts, updated specs, and verified tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2809c77` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
