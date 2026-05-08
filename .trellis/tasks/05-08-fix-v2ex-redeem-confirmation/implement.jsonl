@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend spec index for project conventions."}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Keep the V2EX change inside the existing platform module structure."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Preserve visible failure behavior and process exit semantics."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Add diagnostic logs without exposing secrets or bypassing runtime_log."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Contains the V2EX daily mission confirmation contracts and required tests."}
+{"file": ".trellis/tasks/05-08-fix-v2ex-redeem-confirmation/research/timerring-cloudcheckin.md", "reason": "Upstream CloudCheckin reference and CI/CD/Cloudflare Workers removal context."}

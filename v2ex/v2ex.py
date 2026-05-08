@@ -1,6 +1,9 @@
 import re
 import sys
 from datetime import datetime
+from html import unescape
+from html.parser import HTMLParser
+from urllib.parse import parse_qs, urljoin, urlparse, urlunparse
 
 from curl_cffi import requests
 from dotenv import load_dotenv
@@ -18,11 +21,86 @@ LOGIN_PAGE_MARKERS = (
 ALREADY_CLAIMED_MARKERS = (
     "每日登录奖励已领取",
 )
-REDEEM_SUCCESS_MARKERS = (
-    "已成功领取每日登录奖励",
+ACTION_ASSIGNMENT_PATTERN = re.compile(
+    r"(?:window\.)?location(?:\.href)?\s*=\s*(['\"])(?P<url>.*?)\1",
+    re.IGNORECASE,
 )
-ONCE_PATTERN = re.compile(r"redeem\?once=([^'\"&<\s]+)")
+V2EX_ORIGIN = "https://www.v2ex.com"
 MISSION_DAILY_URL = "https://www.v2ex.com/mission/daily"
+BALANCE_URL = "https://www.v2ex.com/balance"
+HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+BALANCE_ROW_PATTERN = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.DOTALL | re.IGNORECASE)
+BALANCE_SMALL_GRAY_PATTERN = re.compile(
+    r"<small\b(?=[^>]*\bclass=['\"][^'\"]*\bgray\b[^'\"]*['\"])[^>]*>"
+    r"(.*?)</small>",
+    re.DOTALL | re.IGNORECASE,
+)
+BALANCE_RIGHT_TD_PATTERN = re.compile(
+    r"<td\b(?=[^>]*\bclass=['\"][^'\"]*\bd\b[^'\"]*['\"])"
+    r"(?=[^>]*\bstyle=['\"][^'\"]*text-align:\s*right;?[^'\"]*['\"])[^>]*>"
+    r"(.*?)</td>",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def _is_supported_mission_action_path(path: str) -> bool:
+    return path in {"/balance", "/mission/daily/redeem"}
+
+
+def _normalize_v2ex_action_url(action: str) -> str | None:
+    parsed = urlparse(urljoin(V2EX_ORIGIN, action.strip()))
+    if parsed.scheme not in {"http", "https"}:
+        return None
+    if parsed.netloc not in {"v2ex.com", "www.v2ex.com"}:
+        return None
+    if not _is_supported_mission_action_path(parsed.path):
+        return None
+    if parsed.path == "/mission/daily/redeem" and not parse_qs(parsed.query).get(
+        "once"
+    ):
+        return None
+
+    return urlunparse(("https", "www.v2ex.com", parsed.path, "", parsed.query, ""))
+
+
+def _is_balance_action_url(action_url: str) -> bool:
+    return urlparse(action_url).path == "/balance"
+
+
+def _is_redeem_action_url(action_url: str) -> bool:
+    return urlparse(action_url).path == "/mission/daily/redeem"
+
+
+def _extract_onclick_action_url(onclick: str) -> str | None:
+    match = ACTION_ASSIGNMENT_PATTERN.search(unescape(onclick))
+    if not match:
+        return None
+
+    return _normalize_v2ex_action_url(match.group("url"))
+
+
+class _MissionActionParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.action_url: str | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if self.action_url is not None:
+            return
+
+        attr_map = {name.lower(): value or "" for name, value in attrs}
+        onclick = attr_map.get("onclick")
+        if onclick:
+            action_url = _extract_onclick_action_url(onclick)
+            if action_url:
+                self.action_url = action_url
+                return
+
+
+def _parse_daily_mission_action_url(content: str) -> str | None:
+    parser = _MissionActionParser()
+    parser.feed(content)
+    return parser.action_url
 
 
 def build_headers(cookie: str) -> dict[str, str]:
@@ -65,11 +143,60 @@ def _is_already_claimed_page(content: str) -> bool:
     return _contains_marker(content, ALREADY_CLAIMED_MARKERS)
 
 
-def _is_redeem_success_page(content: str) -> bool:
-    return _contains_marker(content, REDEEM_SUCCESS_MARKERS)
+def _today_local_date() -> str:
+    return datetime.now().astimezone().date().isoformat()
 
 
-def get_once(headers: dict[str, str], message: str) -> tuple[str | None, bool, str]:
+def _strip_html(value: str) -> str:
+    return unescape(HTML_TAG_PATTERN.sub("", value)).strip()
+
+
+def _parse_balance_daily_rewards(content: str) -> list[tuple[str, str]]:
+    entries = []
+    for row in BALANCE_ROW_PATTERN.findall(content):
+        if "每日登录奖励" not in _strip_html(row):
+            continue
+
+        time_match = BALANCE_SMALL_GRAY_PATTERN.search(row)
+        if not time_match:
+            continue
+
+        right_values = [
+            _strip_html(value) for value in BALANCE_RIGHT_TD_PATTERN.findall(row)
+        ]
+        reward_value = right_values[-1] if right_values else ""
+        entries.append((_strip_html(time_match.group(1)), reward_value))
+
+    return entries
+
+
+def _balance_time_is_today(balance_time: str) -> bool:
+    today = _today_local_date()
+    return balance_time.startswith(today) or balance_time.startswith(
+        today.replace("-", "/")
+    )
+
+
+def _balance_confirms_today_daily_reward(headers: dict[str, str]) -> bool:
+    try:
+        content = _fetch_page(BALANCE_URL, headers)
+    except Exception as exc:
+        log(f"V2EX balance confirmation failed: {type(exc).__name__}")
+        return False
+
+    entries = _parse_balance_daily_rewards(content)
+    if any(_balance_time_is_today(reward_time) for reward_time, _ in entries):
+        log("V2EX balance page confirms today's daily reward")
+        return True
+
+    log("V2EX balance page did not confirm today's daily reward")
+    return False
+
+
+def get_daily_mission_action(
+    headers: dict[str, str],
+    message: str,
+) -> tuple[str | None, bool, str]:
     content = _fetch_page(MISSION_DAILY_URL, headers)
 
     if _is_login_page(content):
@@ -79,65 +206,75 @@ def get_once(headers: dict[str, str], message: str) -> tuple[str | None, bool, s
     if _is_already_claimed_page(content):
         return None, True, message + "You have already signed today.\n"
 
-    once_match = ONCE_PATTERN.search(content)
-    if once_match:
-        return once_match.group(1), False, message + "Successfully got once token\n"
+    action_url = _parse_daily_mission_action_url(content)
+    if action_url:
+        if _is_balance_action_url(action_url):
+            return None, True, message + "You have already signed today.\n"
+        return action_url, False, message + "Successfully got daily mission action\n"
 
-    log("V2EX daily mission page loaded but no redeem once token was found")
-    return None, False, message + "Have not signed, but fail to get once\n"
+    log("V2EX daily mission page loaded but no supported action was found")
+    return (
+        None,
+        False,
+        message + "Have not signed, but fail to get daily mission action\n",
+    )
 
 
-def check_in(once: str, headers: dict[str, str], message: str) -> tuple[bool, str]:
+def check_in(
+    action_url: str,
+    headers: dict[str, str],
+    message: str,
+) -> tuple[bool, str]:
+    normalized_action_url = _normalize_v2ex_action_url(action_url)
+    if not normalized_action_url:
+        log("V2EX daily mission action was not a supported V2EX action")
+        return False, message + "Fail to check in: unsupported daily mission action\n"
+
+    if _is_balance_action_url(normalized_action_url):
+        return True, message + "You have already signed today.\n"
+
+    if not _is_redeem_action_url(normalized_action_url):
+        log("V2EX daily mission action was not a supported redeem action")
+        return False, message + "Fail to check in: unsupported daily mission action\n"
+
     try:
-        content = _fetch_page(f"{MISSION_DAILY_URL}/redeem?once={once}", headers)
+        content = _fetch_page(normalized_action_url, headers)
     except Exception as exc:
-        log(f"V2EX redeem request failed before response classification: {type(exc).__name__}")
-        return False, message + "Fail to check in: redeem request failed before response classification\n"
+        log(
+            "V2EX redeem action request failed before balance confirmation: "
+            f"{type(exc).__name__}"
+        )
+        return (
+            False,
+            message
+            + "Fail to check in: redeem action request failed before balance confirmation\n",
+        )
 
     if _is_login_page(content):
         log("V2EX redeem response indicates the cookie is unauthenticated")
-        return False, message + "Fail to check in: cookie is unauthenticated or expired\n"
+        return (
+            False,
+            message + "Fail to check in: cookie is unauthenticated or expired\n",
+        )
 
-    redeem_succeeded = _is_redeem_success_page(content)
-    redeem_already_claimed = _is_already_claimed_page(content)
-
-    try:
-        final_content = _fetch_page(MISSION_DAILY_URL, headers)
-    except Exception as exc:
-        log(f"V2EX final mission confirmation failed: {type(exc).__name__}")
-        if redeem_succeeded:
-            return True, message + "Check in successfully\n"
-        if redeem_already_claimed:
-            return True, message + "Daily reward was already claimed after redeem request\n"
-        return False, message + "Fail to check in: final mission confirmation failed\n"
-
-    if _is_already_claimed_page(final_content):
+    if _balance_confirms_today_daily_reward(headers):
         return True, message + "Check in successfully\n"
 
-    if _is_login_page(final_content):
-        log("V2EX final mission page indicates the cookie is unauthenticated")
-        return False, message + "Fail to check in: cookie is unauthenticated or expired\n"
-
-    if redeem_succeeded:
-        return True, message + "Check in successfully\n"
-
-    if redeem_already_claimed:
-        log("V2EX redeem response indicates the daily reward was already claimed")
-        return True, message + "Daily reward was already claimed after redeem request\n"
-
-    log("V2EX redeem response did not contain a success or already-claimed marker")
-    return False, message + "Fail to check in: redeem response was not successful\n"
+    log("V2EX balance page did not confirm today's reward after redeem action")
+    return (
+        False,
+        message + "Fail to check in: balance page did not confirm today's daily reward\n",
+    )
 
 
 def balance(headers: dict[str, str]) -> tuple[str | None, str | None]:
-    content = _fetch_page("https://www.v2ex.com/balance", headers)
-    pattern = r'每日登录奖励.*?<small class="gray">(.*?)</small>.*?<td class="d" style="text-align: right;">.*?</td>.*?<td class="d" style="text-align: right;">(.*?)</td>'
-    match = re.search(pattern, content, re.DOTALL)
+    content = _fetch_page(BALANCE_URL, headers)
+    entries = _parse_balance_daily_rewards(content)
 
-    if not match:
+    if not entries:
         return None, None
 
-    return match.group(1).strip(), match.group(2).strip()
+    return entries[0]
 
 
 def main() -> int:
@@ -150,18 +287,18 @@ def main() -> int:
 
     message = datetime.now().astimezone().strftime("%Y/%m/%d %H:%M:%S") + " from V2EX \n"
     headers = build_headers(cookie)
-    once, signed, message = get_once(headers, message)
+    action_url, signed, message = get_daily_mission_action(headers, message)
 
     if signed:
         log("V2EX already checked in today")
         send_tg_notification(message)
         return 0
 
-    if not once:
+    if not action_url:
         send_tg_notification(message + "FAIL.\n")
-        raise ValueError("V2EX daily mission page did not provide a redeem once token")
+        raise ValueError("V2EX daily mission page did not provide a supported action")
 
-    success, message = check_in(once, headers, message)
+    success, message = check_in(action_url, headers, message)
     if not success:
         send_tg_notification(message)
         raise ValueError("V2EX redeem request did not complete successfully")

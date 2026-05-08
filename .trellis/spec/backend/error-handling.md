@@ -53,7 +53,7 @@ Inside helpers, the codebase currently mixes two styles:
 
 Examples:
 
-- [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:27) returns `(once, signed)` instead of raising for every bad page state.
+- [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:195) returns `(action_url, signed, message)` from daily mission action detection instead of raising for every bad page state.
 - [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1) returns `False` when notification configuration is invalid or delivery fails, letting the main job decide whether the overall run should fail.
 
 ### Scheduler Boundary

@@ -64,7 +64,6 @@ Examples:
 - Shared resolver signature: `get_cookie_value(env_name: str, domains: list[str]) -> str`
 - Shared attendance signature: `run_attendance_checkin(config: AttendanceConfig, *, get_cookie, notify, sleep, randint, post, timeout) -> int`
 - Cookie Cloud endpoint shape: `POST <COOKIE_CLOUD_URL>/get/<COOKIE_CLOUD_UUID>?crypto_type=...`
-- Docker Hub publish workflow: `.github/workflows/dockerhub-publish.yml`
 - Deployment compose file: `docker-compose.yml`
 - Local build override file: `docker-compose.build.yml`
 - Git ignore file: `.gitignore`
@@ -110,10 +109,11 @@ Examples:
 - `run_targets()` must forward target subprocess stdout/stderr while the target
   runs and, on failure, print a bounded recent stdout/stderr summary without
   introducing new secret sources beyond the subprocess output itself.
-- Docker Hub publishing uses GitHub repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
-- Optional GitHub repository variable `DOCKERHUB_IMAGE` overrides the default image name.
-- If `DOCKERHUB_IMAGE` is empty, the workflow publishes to `<DOCKERHUB_USERNAME>/cloudcheckin`.
-- The publish workflow runs automatically on pushes to `main`, pushes of `v*` git tags, and manual dispatch.
+- Docker Compose on the NAS or local host is the supported deployment contract.
+- GitHub Actions, CircleCI, and Cloudflare Workers are out of scope for this
+  repository and should not be reintroduced as tracked deployment files.
+- Docker image publishing, if needed, is an external/manual release concern, not
+  a repository CI/CD workflow contract.
 - Because the Dockerfile uses `COPY . .`, `.dockerignore` must exclude local
   secrets, agent/editor tooling, Trellis metadata, test-only files, caches,
   virtualenvs, packaging artifacts, local compose files, and build helper
@@ -148,8 +148,8 @@ Examples:
 | Local developer needs to build current source | Compose uses `docker-compose.build.yml` as an explicit override |
 | Docker image is built from the repository root | `/app` contains runtime Python modules and `requirements.txt`, but not `.env`, `.agents`, `.codex`, `.claude`, `.cursor`, `.trellis`, `.venv`, `.pytest_cache`, or `tests` |
 | Local generated/cache directories exist after development or tests | They are ignored by git and may be deleted locally; source tests remain tracked |
-| Docker Hub username/token missing | Workflow fails in login or image resolution before build/push |
-| `DOCKERHUB_IMAGE` contains uppercase letters | Workflow lowercases the final image name before metadata/build |
+| CI/CD or Worker deployment files are proposed | Reject them as out of scope for the Docker/NAS deployment contract |
+| Docker image publication is needed | Handle it outside the repository's tracked CI/CD files |
 
 ### 5. Good / Base / Bad Cases
 
@@ -190,7 +190,6 @@ Examples:
 - Validate repository cleanup with `git status --ignored` or targeted `git
   ls-files` checks when changing ignore rules, and do not remove tracked tests
   as a substitute for excluding them from the runtime image.
-- Validate GitHub Actions workflow syntax with `actionlint`.
 - When real credentials are available, run the affected module with `python -m ...`, `python run.py`, or the long-running container and assert the correct cookie source is used.
 
 ### 7. Wrong vs Correct
@@ -301,15 +300,23 @@ if failures:
 
 - Daily mission page: `GET https://www.v2ex.com/mission/daily`
 - Redeem URL shape: `GET https://www.v2ex.com/mission/daily/redeem?once=<token>`
-- Check-in helper signature: `check_in(once: str, headers: dict[str, str], message: str) -> tuple[bool, str]`
+- Mission action helper signature: `get_daily_mission_action(headers: dict[str, str], message: str) -> tuple[str | None, bool, str]`
+- Check-in helper signature: `check_in(action_url: str, headers: dict[str, str], message: str) -> tuple[bool, str]`
 - Balance helper signature: `balance(headers: dict[str, str]) -> tuple[str | None, str | None]`
 
 ### 3. Contracts
 
-- The `once` token is parsed from the mission page and must not be logged.
+- The daily mission action URL is parsed from the V2EX page action/button and
+  normalized to `https://www.v2ex.com`.
+- The action URL can contain a `once` token and must not be logged or copied
+  into user-facing status messages.
+- A mission action URL pointing to `/balance` means the daily mission is already
+  complete and must be treated as an idempotent success.
+- A redeem action URL must be requested with `curl_cffi` and a finite timeout.
 - A page containing `每日登录奖励已领取` means the daily mission is complete.
-- A page containing `已成功领取每日登录奖励` is an immediate redeem success marker.
 - A login page marker means the cookie is expired or unauthenticated.
+- After a redeem action, today's `/balance` `每日登录奖励` entry is the
+  authoritative success proof; redeem response markers alone are not sufficient.
 - Balance parsing is supplemental after a successful redeem; missing balance
   data must not convert the check-in into a failure.
 
@@ -318,37 +325,46 @@ if failures:
 | Condition | Expected Behavior |
 |----------|-------------------|
 | Initial mission page already says reward claimed | Treat as successful idempotent run |
-| Redeem response is unclear, final mission page says reward claimed | Treat as successful check-in |
-| Redeem response says success, final mission confirmation request fails | Log confirmation failure and keep success |
-| Final mission page indicates login required | Treat as failure even if redeem response looked successful |
-| Redeem and final mission page both lack success markers | Fail with a clear V2EX redeem message |
+| Mission action points to `/balance` | Treat as successful idempotent run |
+| Mission action points to redeem and today's balance page has a daily reward entry | Treat as successful check-in |
+| Redeem response says success but today's balance page lacks a daily reward entry | Fail with a clear V2EX balance confirmation message |
+| Redeem response indicates login required | Treat as failure |
+| Mission page has no supported action | Fail without logging raw action or token data |
 | Balance parsing fails after successful redeem | Log the parsing failure, send the normal notification, and return success |
 
 ### 5. Good / Base / Bad Cases
 
-- Good: redeem returns a changed or redirected page, final mission page contains
-  `每日登录奖励已领取`, and the job returns success.
-- Base: redeem returns `已成功领取每日登录奖励`; final confirmation fails due to
-  a transient request error, and the job keeps the immediate success.
-- Bad: after a successful redeem, `/balance` HTML changes and parsing returns
-  `None`; do not raise `ValueError` for the whole check-in.
+- Good: the mission page button points to `/mission/daily/redeem?once=...`,
+  redeem returns a changed or redirected page, `/balance` contains today's
+  `每日登录奖励`, and the job returns success.
+- Base: the mission page button points to `/balance`, so the job returns an
+  idempotent already-signed success without requesting a redeem URL.
+- Bad: redeem returns `已成功领取每日登录奖励`, but `/balance` does not contain
+  today's daily reward entry; do not treat the redeem response body alone as
+  success.
 
 ### 6. Tests Required
 
-- Test that `check_in()` succeeds when final mission confirmation contains the
-  already-claimed marker even if the redeem response text changed.
-- Test that `check_in()` fails when the final mission page indicates login is
+- Test that the mission action parser extracts a V2EX-style button `onclick`
+  action and normalizes relative URLs.
+- Test that an action pointing to `/balance` is treated as an idempotent
+  already-signed success.
+- Test that `check_in()` requests the parsed redeem action and succeeds when
+  `/balance` contains today's daily reward entry.
+- Test that `check_in()` fails when redeem runs but `/balance` does not confirm
+  today's daily reward, even if the redeem response contains a success marker.
+- Test that `check_in()` fails when the redeem response indicates login is
   required.
 - Test that `main()` keeps a successful return code and sends the success
   notification when balance parsing returns `(None, None)`.
-- Assert logs never include the `once` token.
+- Assert logs never include action URLs, `once` tokens, or cookie values.
 
 ### 7. Wrong vs Correct
 
 #### Wrong
 
 ```python
-success, message = check_in(once, headers, message)
+success, message = check_in(action_url, headers, message)
 if success and balance(headers) == (None, None):
     raise ValueError("V2EX balance parsing failed")
 ```
@@ -356,7 +372,7 @@ if success and balance(headers) == (None, None):
 #### Correct
 
 ```python
-success, message = check_in(once, headers, message)
+success, message = check_in(action_url, headers, message)
 if success and balance(headers) == (None, None):
     log("V2EX balance parsing failed after successful redeem")
 ```
