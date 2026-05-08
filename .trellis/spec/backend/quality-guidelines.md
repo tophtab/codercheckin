@@ -120,6 +120,12 @@ Examples:
   secrets, agent/editor tooling, Trellis metadata, test-only files, caches,
   virtualenvs, packaging artifacts, local compose files, and build helper
   directories that are not needed by the runtime scheduler image.
+- Docker image slimming must preserve the `python:3.11-slim` base image and
+  runtime dependencies unless there is an explicit compatibility test plan.
+  Low-risk dependency install slimming may remove pip self-upgrades, install
+  with `pip install --no-cache-dir --no-compile -r requirements.txt`, and clean
+  generated `*.pyc` / `__pycache__` files from `/usr/local/lib/python3.11` in
+  the same image layer.
 - `.gitignore` must keep local secrets, Python caches, pytest/mypy/ruff caches,
   virtualenvs, coverage output, package metadata, and build outputs out of git
   history, while keeping checked-in examples such as `.env.localtest.example`.
@@ -149,6 +155,7 @@ Examples:
 | Server runs `docker compose` with default files | Compose pulls `CLOUDCHECKIN_IMAGE` instead of building locally |
 | Local developer needs to build current source | Compose uses `docker-compose.build.yml` as an explicit override |
 | Docker image is built from the repository root | `/app` contains runtime Python modules and `requirements.txt`, but not `.env`, `.agents`, `.codex`, `.claude`, `.cursor`, `.trellis`, `.venv`, `.pytest_cache`, or `tests` |
+| Low-risk Docker image slimming is applied | Image still builds from `python:3.11-slim`, scheduler starts with placeholder cookie config, and `/usr/local/lib/python3.11` contains no generated `*.pyc` or `__pycache__` files |
 | Local generated/cache directories exist after development or tests | They are ignored by git and may be deleted locally; source tests remain tracked |
 | Docker image publication is needed | Use the GitHub Actions Docker Hub publish workflow with Docker Hub secrets and no checked-in credentials |
 | CircleCI or Worker deployment files are proposed | Reject them as out of scope for the Docker/NAS deployment contract |
@@ -189,6 +196,9 @@ Examples:
 - Validate Docker build context hygiene with a local image build and an image
   contents check that confirms runtime files are present and ignored
   development, cache, test, metadata, and secret paths are absent from `/app`.
+- Validate low-risk Docker image slimming with a local image build, a scheduler
+  smoke run using placeholder direct-cookie configuration, and an image contents
+  check for absent `/usr/local/lib/python3.11` `*.pyc` / `__pycache__` files.
 - Validate repository cleanup with `git status --ignored` or targeted `git
   ls-files` checks when changing ignore rules, and do not remove tracked tests
   as a substitute for excluding them from the runtime image.
