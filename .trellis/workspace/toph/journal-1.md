@@ -808,3 +808,36 @@ Removed runtime-unneeded pip self-upgrade, disabled dependency bytecode compilat
 ### Next Steps
 
 - None - task complete
+
+
+## Session 23: Fix V2EX session cookie flow
+
+**Date**: 2026-05-09
+**Task**: Fix V2EX session cookie flow
+**Branch**: `main`
+
+### Summary
+
+Preserved V2EX cookies across mission, redeem, and balance requests with a shared curl_cffi Session; added regression coverage and updated backend V2EX quality guidance.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cd57e26` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
