@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 23
+- **Total Sessions**: 24
 - **Last Active**: 2026-05-09
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~843 | Active |
+| `journal-1.md` | ~876 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 24 | 2026-05-09 | Align check-in browser headers | `7f8e361` | `main` |
 | 23 | 2026-05-09 | Fix V2EX session cookie flow | `cd57e26` | `main` |
 | 22 | 2026-05-08 | Slim Docker image build | `1189d97` | `main` |
 | 21 | 2026-05-08 | Review and commit Trellis agent workflow update | `96a000c` | `main` |

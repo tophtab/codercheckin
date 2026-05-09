@@ -841,3 +841,36 @@ Preserved V2EX cookies across mission, redeem, and balance requests with a share
 ### Next Steps
 
 - None - task complete
+
+
+## Session 24: Align check-in browser headers
+
+**Date**: 2026-05-09
+**Task**: Align check-in browser headers
+**Branch**: `main`
+
+### Summary
+
+Aligned check-in browser identity headers with the user's Chrome 132 UA, kept dynamic captured request values out of source, added focused header tests, ran the full pytest suite, updated backend header-change guidance, and archived the completed task.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7f8e361` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
