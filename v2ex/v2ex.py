@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 from html import unescape
 from html.parser import HTMLParser
+from http.cookies import SimpleCookie
 from urllib.parse import parse_qs, urljoin, urlparse, urlunparse
 
 from curl_cffi import requests
@@ -125,9 +126,47 @@ def build_headers(cookie: str) -> dict[str, str]:
     }
 
 
-def _fetch_page(url: str, headers: dict[str, str]) -> str:
-    response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+def build_session(cookie: str) -> requests.Session:
+    session = requests.Session()
+    parsed_cookie = SimpleCookie()
+    parsed_cookie.load(cookie)
+    for name, morsel in parsed_cookie.items():
+        session.cookies.set(name, morsel.value, domain="www.v2ex.com", path="/")
+
+    return session
+
+
+def _headers_for_session(headers: dict[str, str]) -> dict[str, str]:
+    return {
+        name: value for name, value in headers.items() if name.lower() != "cookie"
+    }
+
+
+def _fetch_page(
+    url: str,
+    headers: dict[str, str],
+    session: requests.Session | None = None,
+) -> str:
+    if session is None:
+        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+    else:
+        response = session.get(
+            url,
+            headers=_headers_for_session(headers),
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
     return response.text
+
+
+def _fetch_page_with_session(
+    url: str,
+    headers: dict[str, str],
+    session: requests.Session | None,
+) -> str:
+    if session is None:
+        return _fetch_page(url, headers)
+
+    return _fetch_page(url, headers, session)
 
 
 def _contains_marker(content: str, markers: tuple[str, ...]) -> bool:
@@ -177,9 +216,12 @@ def _balance_time_is_today(balance_time: str) -> bool:
     )
 
 
-def _balance_confirms_today_daily_reward(headers: dict[str, str]) -> bool:
+def _balance_confirms_today_daily_reward(
+    headers: dict[str, str],
+    session: requests.Session | None = None,
+) -> bool:
     try:
-        content = _fetch_page(BALANCE_URL, headers)
+        content = _fetch_page_with_session(BALANCE_URL, headers, session)
     except Exception as exc:
         log(f"V2EX balance confirmation failed: {type(exc).__name__}")
         return False
@@ -196,8 +238,9 @@ def _balance_confirms_today_daily_reward(headers: dict[str, str]) -> bool:
 def get_daily_mission_action(
     headers: dict[str, str],
     message: str,
+    session: requests.Session | None = None,
 ) -> tuple[str | None, bool, str]:
-    content = _fetch_page(MISSION_DAILY_URL, headers)
+    content = _fetch_page_with_session(MISSION_DAILY_URL, headers, session)
 
     if _is_login_page(content):
         log("V2EX daily mission page indicates the cookie is unauthenticated")
@@ -224,6 +267,7 @@ def check_in(
     action_url: str,
     headers: dict[str, str],
     message: str,
+    session: requests.Session | None = None,
 ) -> tuple[bool, str]:
     normalized_action_url = _normalize_v2ex_action_url(action_url)
     if not normalized_action_url:
@@ -238,7 +282,7 @@ def check_in(
         return False, message + "Fail to check in: unsupported daily mission action\n"
 
     try:
-        content = _fetch_page(normalized_action_url, headers)
+        content = _fetch_page_with_session(normalized_action_url, headers, session)
     except Exception as exc:
         log(
             "V2EX redeem action request failed before balance confirmation: "
@@ -257,7 +301,7 @@ def check_in(
             message + "Fail to check in: cookie is unauthenticated or expired\n",
         )
 
-    if _balance_confirms_today_daily_reward(headers):
+    if _balance_confirms_today_daily_reward(headers, session):
         return True, message + "Check in successfully\n"
 
     log("V2EX balance page did not confirm today's reward after redeem action")
@@ -267,8 +311,11 @@ def check_in(
     )
 
 
-def balance(headers: dict[str, str]) -> tuple[str | None, str | None]:
-    content = _fetch_page(BALANCE_URL, headers)
+def balance(
+    headers: dict[str, str],
+    session: requests.Session | None = None,
+) -> tuple[str | None, str | None]:
+    content = _fetch_page_with_session(BALANCE_URL, headers, session)
     entries = _parse_balance_daily_rewards(content)
 
     if not entries:
@@ -287,7 +334,8 @@ def main() -> int:
 
     message = datetime.now().astimezone().strftime("%Y/%m/%d %H:%M:%S") + " from V2EX \n"
     headers = build_headers(cookie)
-    action_url, signed, message = get_daily_mission_action(headers, message)
+    session = build_session(cookie)
+    action_url, signed, message = get_daily_mission_action(headers, message, session)
 
     if signed:
         log("V2EX already checked in today")
@@ -298,12 +346,12 @@ def main() -> int:
         send_tg_notification(message + "FAIL.\n")
         raise ValueError("V2EX daily mission page did not provide a supported action")
 
-    success, message = check_in(action_url, headers, message)
+    success, message = check_in(action_url, headers, message, session)
     if not success:
         send_tg_notification(message)
         raise ValueError("V2EX redeem request did not complete successfully")
 
-    balance_time, balance_value = balance(headers)
+    balance_time, balance_value = balance(headers, session)
     if not balance_time or not balance_value:
         log("V2EX balance parsing failed after successful redeem")
 

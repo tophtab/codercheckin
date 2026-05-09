@@ -153,6 +153,91 @@ def test_check_in_requests_action_then_confirms_from_today_balance_entry(
     assert all("redacted-once" not in line for line in output_lines)
 
 
+def test_shared_session_preserves_mission_cookies_for_redeem_and_balance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    today = "2026-05-08"
+    action_url = "https://www.v2ex.com/mission/daily/redeem?once=redacted-once"
+    balance_html = f"""
+    <table>
+      <tr>
+        <td class="d"><small class="gray">{today} 15:22:00 +08:00</small></td>
+        <td class="d">每日登录奖励</td>
+        <td class="d" style="text-align: right;">+1</td>
+        <td class="d" style="text-align: right;">100</td>
+      </tr>
+    </table>
+    """
+
+    class Response:
+        def __init__(self, text: str) -> None:
+            self.text = text
+
+    class Session:
+        def __init__(self) -> None:
+            self.cookies = {"sid": "initial"}
+            self.calls = []
+
+        def get(
+            self,
+            url: str,
+            headers: dict[str, str],
+            timeout: int,
+        ) -> Response:
+            self.calls.append((url, dict(headers), dict(self.cookies), timeout))
+            assert "cookie" not in {name.lower() for name in headers}
+            if url == v2ex.MISSION_DAILY_URL:
+                self.cookies["mission_session"] = "issued"
+                return Response(
+                    _redeem_button("/mission/daily/redeem?once=redacted-once")
+                )
+            if url == action_url:
+                assert self.cookies["mission_session"] == "issued"
+                self.cookies["redeem_session"] = "issued"
+                return Response("redeem response changed")
+            if url == v2ex.BALANCE_URL:
+                assert self.cookies["mission_session"] == "issued"
+                assert self.cookies["redeem_session"] == "issued"
+                return Response(balance_html)
+            raise AssertionError(f"unexpected url: {url}")
+
+    monkeypatch.setattr(v2ex, "_today_local_date", lambda: today)
+
+    session = Session()
+    headers = v2ex.build_headers("sid=initial")
+    action_url_result, signed, message = v2ex.get_daily_mission_action(
+        headers,
+        "V2EX\n",
+        session,
+    )
+    success, message = v2ex.check_in(
+        action_url_result or "",
+        headers,
+        message,
+        session,
+    )
+
+    assert signed is False
+    assert action_url_result == action_url
+    assert success is True
+    assert "Check in successfully" in message
+    assert [call[0] for call in session.calls] == [
+        v2ex.MISSION_DAILY_URL,
+        action_url,
+        v2ex.BALANCE_URL,
+    ]
+    assert session.calls[1][2]["mission_session"] == "issued"
+    assert session.calls[2][2]["redeem_session"] == "issued"
+    assert all(call[3] == v2ex.REQUEST_TIMEOUT_SECONDS for call in session.calls)
+
+
+def test_build_session_seeds_cookie_jar_from_resolved_cookie() -> None:
+    session = v2ex.build_session("sid=direct; foo=bar")
+
+    assert session.cookies.get("sid") == "direct"
+    assert session.cookies.get("foo") == "bar"
+
+
 def test_check_in_treats_balance_action_as_success() -> None:
     success, message = v2ex.check_in(v2ex.BALANCE_URL, {}, "V2EX\n")
 
@@ -352,7 +437,7 @@ def test_main_keeps_success_when_balance_parsing_fails(
     monkeypatch.setattr(
         v2ex,
         "get_daily_mission_action",
-        lambda headers, message: (
+        lambda headers, message, session: (
             "https://www.v2ex.com/mission/daily/redeem?once=redacted-once",
             False,
             message + "Successfully got daily mission action\n",
@@ -361,12 +446,12 @@ def test_main_keeps_success_when_balance_parsing_fails(
     monkeypatch.setattr(
         v2ex,
         "check_in",
-        lambda action_url, headers, message: (
+        lambda action_url, headers, message, session: (
             True,
             message + "Check in successfully\n",
         ),
     )
-    monkeypatch.setattr(v2ex, "balance", lambda headers: (None, None))
+    monkeypatch.setattr(v2ex, "balance", lambda headers, session: (None, None))
     monkeypatch.setattr(
         v2ex,
         "send_tg_notification",

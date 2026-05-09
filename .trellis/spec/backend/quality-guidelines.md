@@ -312,14 +312,19 @@ if failures:
 
 - Daily mission page: `GET https://www.v2ex.com/mission/daily`
 - Redeem URL shape: `GET https://www.v2ex.com/mission/daily/redeem?once=<token>`
-- Mission action helper signature: `get_daily_mission_action(headers: dict[str, str], message: str) -> tuple[str | None, bool, str]`
-- Check-in helper signature: `check_in(action_url: str, headers: dict[str, str], message: str) -> tuple[bool, str]`
-- Balance helper signature: `balance(headers: dict[str, str]) -> tuple[str | None, str | None]`
+- Mission action helper signature: `get_daily_mission_action(headers: dict[str, str], message: str, session: requests.Session | None = None) -> tuple[str | None, bool, str]`
+- Check-in helper signature: `check_in(action_url: str, headers: dict[str, str], message: str, session: requests.Session | None = None) -> tuple[bool, str]`
+- Balance helper signature: `balance(headers: dict[str, str], session: requests.Session | None = None) -> tuple[str | None, str | None]`
 
 ### 3. Contracts
 
 - The daily mission action URL is parsed from the V2EX page action/button and
   normalized to `https://www.v2ex.com`.
+- First-run V2EX mission, redeem, and balance confirmation requests must share
+  one `curl_cffi.requests.Session()` seeded from the resolved `V2EX_COOKIE`
+  value so cookies issued by earlier responses are sent to later requests.
+- Session-backed V2EX requests should rely on the session cookie jar instead of
+  passing a raw `cookie` request header.
 - The action URL can contain a `once` token and must not be logged or copied
   into user-facing status messages.
 - A mission action URL pointing to `/balance` means the daily mission is already
@@ -363,6 +368,9 @@ if failures:
   already-signed success.
 - Test that `check_in()` requests the parsed redeem action and succeeds when
   `/balance` contains today's daily reward entry.
+- Test that cookies issued during the mission page request are available to the
+  redeem request and the balance confirmation request through one shared
+  session.
 - Test that `check_in()` fails when redeem runs but `/balance` does not confirm
   today's daily reward, even if the redeem response contains a success marker.
 - Test that `check_in()` fails when the redeem response indicates login is
