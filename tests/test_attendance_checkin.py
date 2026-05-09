@@ -3,6 +3,11 @@ from types import SimpleNamespace
 import pytest
 
 from attendance_checkin import AttendanceConfig, run_attendance_checkin
+from config import (
+    DEFAULT_ACCEPT_LANGUAGE,
+    DEFAULT_BROWSER_IMPERSONATE,
+    DEFAULT_USER_AGENT,
+)
 from tests.log_assertions import assert_timestamped_lines
 
 
@@ -27,6 +32,8 @@ def test_run_attendance_checkin_posts_each_cookie_with_timeout(
             {
                 "url": url,
                 "cookie": headers["Cookie"],
+                "user_agent": headers["User-Agent"],
+                "accept_language": headers["Accept-Language"],
                 "impersonate": impersonate,
                 "timeout": timeout,
             }
@@ -47,13 +54,17 @@ def test_run_attendance_checkin_posts_each_cookie_with_timeout(
         {
             "url": CONFIG.attendance_url,
             "cookie": "a=1",
-            "impersonate": "chrome136",
+            "user_agent": DEFAULT_USER_AGENT,
+            "accept_language": DEFAULT_ACCEPT_LANGUAGE,
+            "impersonate": DEFAULT_BROWSER_IMPERSONATE,
             "timeout": 30,
         },
         {
             "url": CONFIG.attendance_url,
             "cookie": "b=2",
-            "impersonate": "chrome136",
+            "user_agent": DEFAULT_USER_AGENT,
+            "accept_language": DEFAULT_ACCEPT_LANGUAGE,
+            "impersonate": DEFAULT_BROWSER_IMPERSONATE,
             "timeout": 30,
         },
     ]

@@ -6,7 +6,13 @@ from typing import Callable
 from curl_cffi import requests
 
 from checkin_response import is_successful_checkin_response
-from config import DEFAULT_DELAY_RANGE_SECONDS, DEFAULT_USER_AGENT, REQUEST_TIMEOUT_SECONDS
+from config import (
+    DEFAULT_ACCEPT_LANGUAGE,
+    DEFAULT_BROWSER_IMPERSONATE,
+    DEFAULT_DELAY_RANGE_SECONDS,
+    DEFAULT_USER_AGENT,
+    REQUEST_TIMEOUT_SECONDS,
+)
 from runtime_log import log
 
 
@@ -53,7 +59,7 @@ def run_attendance_checkin(
             response = post(
                 config.attendance_url,
                 headers=headers,
-                impersonate="chrome136",
+                impersonate=DEFAULT_BROWSER_IMPERSONATE,
                 timeout=timeout,
             )
         except Exception as err:
@@ -82,6 +88,7 @@ def run_attendance_checkin(
 def _build_headers(config: AttendanceConfig, cookie: str) -> dict[str, str]:
     return {
         "User-Agent": DEFAULT_USER_AGENT,
+        "Accept-Language": DEFAULT_ACCEPT_LANGUAGE,
         "Origin": config.origin,
         "Referer": config.referer,
         "Content-Type": "application/json",

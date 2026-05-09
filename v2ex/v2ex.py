@@ -9,7 +9,14 @@ from urllib.parse import parse_qs, urljoin, urlparse, urlunparse
 from curl_cffi import requests
 from dotenv import load_dotenv
 
-from config import REQUEST_TIMEOUT_SECONDS
+from config import (
+    DEFAULT_ACCEPT_LANGUAGE,
+    DEFAULT_BROWSER_IMPERSONATE,
+    DEFAULT_SEC_CH_UA,
+    DEFAULT_SEC_CH_UA_PLATFORM,
+    DEFAULT_USER_AGENT,
+    REQUEST_TIMEOUT_SECONDS,
+)
 from cookiecloud.client import get_cookie_value
 from runtime_log import log
 from telegram.notify import send_tg_notification
@@ -108,26 +115,25 @@ def build_headers(cookie: str) -> dict[str, str]:
     return {
         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,"
         "image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "accept-language": "en-US,en;q=0.9",
+        "accept-language": DEFAULT_ACCEPT_LANGUAGE,
         "cache-control": "no-cache",
         "pragma": "no-cache",
         "referer": "https://www.v2ex.com/mission/daily",
-        "sec-ch-ua": '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
+        "sec-ch-ua": DEFAULT_SEC_CH_UA,
         "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"macOS"',
+        "sec-ch-ua-platform": DEFAULT_SEC_CH_UA_PLATFORM,
         "sec-fetch-dest": "document",
         "sec-fetch-mode": "navigate",
         "sec-fetch-site": "same-origin",
         "sec-fetch-user": "?1",
         "upgrade-insecure-requests": "1",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+        "user-agent": DEFAULT_USER_AGENT,
         "cookie": cookie,
     }
 
 
 def build_session(cookie: str) -> requests.Session:
-    session = requests.Session()
+    session = requests.Session(impersonate=DEFAULT_BROWSER_IMPERSONATE)
     parsed_cookie = SimpleCookie()
     parsed_cookie.load(cookie)
     for name, morsel in parsed_cookie.items():
@@ -148,7 +154,12 @@ def _fetch_page(
     session: requests.Session | None = None,
 ) -> str:
     if session is None:
-        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+        response = requests.get(
+            url,
+            headers=headers,
+            impersonate=DEFAULT_BROWSER_IMPERSONATE,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
     else:
         response = session.get(
             url,

@@ -419,6 +419,29 @@ Minimum verification for backend changes:
 When you add shared utilities or cross-platform response handling, prefer to extend
 the `tests/` suite instead of leaving the behavior manual-only.
 
+### Browser Identity Header Changes
+
+When changing browser identity headers, update the shared constants in
+[config.py](/home/toph/CloudCheckin/config.py:1) first, then make platform
+modules reuse those constants instead of introducing another hardcoded UA.
+
+Keep the following values consistent when the user's primary browser changes:
+
+- `DEFAULT_USER_AGENT`
+- `DEFAULT_ACCEPT_LANGUAGE`
+- `DEFAULT_SEC_CH_UA`
+- `DEFAULT_SEC_CH_UA_PLATFORM`
+- `DEFAULT_BROWSER_IMPERSONATE`
+
+`DEFAULT_BROWSER_IMPERSONATE` must use a `curl_cffi` impersonation profile that
+exists in the installed dependency. If there is no exact Chrome major version,
+choose the closest stable Chrome profile and cover that choice with tests.
+
+Do not hardcode dynamic browser/session material or unrelated captured request
+preferences such as cookies, `cf_clearance`, `refract-key`, `refract-sign`,
+DNT, GPC, or request-specific nonces. Those values belong in the cookie source
+or in generated request logic, not in source constants.
+
 ---
 
 ## Code Review Checklist
@@ -428,6 +451,9 @@ the `tests/` suite instead of leaving the behavior manual-only.
 - Are failure paths visible through stdout or container logs and, when appropriate, Telegram?
 - Did the author reuse existing notification or captcha integration code where applicable?
 - If a constant or endpoint changed, were all platform-specific copies searched first?
+- If browser identity headers changed, were UA, client hints, language, and
+  `curl_cffi` impersonation checked together against the actual target
+  request?
 - Does the README or operational documentation need updating because local setup or secrets changed?
 
 ---
@@ -437,5 +463,8 @@ the `tests/` suite instead of leaving the behavior manual-only.
 - Adding a feature for one platform by copying another script and forgetting to rename environment variables or notification text.
 - Logging too little to debug CI failures, or too much sensitive data.
 - Changing an external request header or regex in one place without checking related platform variants or shared scheduler assumptions.
+- Hardcoding captured browser-only dynamic headers such as `refract-key`,
+  `refract-sign`, or `cf_clearance`; they expire and may expose session
+  material.
 - Treating this project like a generic backend service and adding abstractions that make simple automation harder to trace.
 - Making Docker support bypass the documented `python -m ...` flows, which creates different behavior between local runs and container runs.

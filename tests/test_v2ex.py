@@ -1,5 +1,12 @@
 import pytest
 
+from config import (
+    DEFAULT_ACCEPT_LANGUAGE,
+    DEFAULT_BROWSER_IMPERSONATE,
+    DEFAULT_SEC_CH_UA,
+    DEFAULT_SEC_CH_UA_PLATFORM,
+    DEFAULT_USER_AGENT,
+)
 from tests.log_assertions import assert_timestamped_lines
 from v2ex import v2ex
 
@@ -71,6 +78,18 @@ def test_parse_daily_mission_action_url_rejects_redeem_without_once() -> None:
     )
 
     assert action_url is None
+
+
+def test_build_headers_matches_configured_browser_identity() -> None:
+    headers = v2ex.build_headers("sid=direct")
+
+    assert headers["user-agent"] == DEFAULT_USER_AGENT
+    assert headers["accept-language"] == DEFAULT_ACCEPT_LANGUAGE
+    assert headers["sec-ch-ua"] == DEFAULT_SEC_CH_UA
+    assert headers["sec-ch-ua-platform"] == DEFAULT_SEC_CH_UA_PLATFORM
+    assert headers["cookie"] == "sid=direct"
+    assert "refract-key" not in headers
+    assert "refract-sign" not in headers
 
 
 def test_get_daily_mission_action_does_not_include_token_in_status_message(
@@ -234,6 +253,7 @@ def test_shared_session_preserves_mission_cookies_for_redeem_and_balance(
 def test_build_session_seeds_cookie_jar_from_resolved_cookie() -> None:
     session = v2ex.build_session("sid=direct; foo=bar")
 
+    assert session.impersonate == DEFAULT_BROWSER_IMPERSONATE
     assert session.cookies.get("sid") == "direct"
     assert session.cookies.get("foo") == "bar"
 
