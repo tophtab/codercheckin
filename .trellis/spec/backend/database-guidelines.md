@@ -22,9 +22,9 @@ where none exists, and about being explicit if future work introduces state.
 
 Examples of the current pattern:
 
-- [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:21) keeps state in process memory only.
-- [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:9) reads cookies from environment variables and immediately performs remote requests.
-- [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:1) keeps Cookie Cloud payload handling in process memory instead of introducing local persistence.
+- [v2ex/v2ex.py](/home/toph/codercheckin/v2ex/v2ex.py:21) keeps state in process memory only.
+- [nodeseek/nodeseek.py](/home/toph/codercheckin/nodeseek/nodeseek.py:9) reads cookies from environment variables and immediately performs remote requests.
+- [cookiecloud/client.py](/home/toph/codercheckin/cookiecloud/client.py:1) keeps Cookie Cloud payload handling in process memory instead of introducing local persistence.
 
 ---
 
@@ -52,9 +52,9 @@ Instead, backend modules follow these patterns:
 
 Examples:
 
-- [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:31) parses the daily mission page with regular expressions.
-- [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:57) fetches remote JSON and derives control flow directly from the payload.
-- [scheduler.py](/home/toph/CloudCheckin/scheduler.py:39) coordinates when the existing platform modules run, but does not introduce any persistent storage.
+- [v2ex/v2ex.py](/home/toph/codercheckin/v2ex/v2ex.py:31) parses the daily mission page with regular expressions.
+- [cookiecloud/client.py](/home/toph/codercheckin/cookiecloud/client.py:57) fetches remote JSON and derives control flow directly from the payload.
+- [scheduler.py](/home/toph/codercheckin/scheduler.py:39) coordinates when the existing platform modules run, but does not introduce any persistent storage.
 
 ---
 

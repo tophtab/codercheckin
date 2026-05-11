@@ -1,4 +1,4 @@
-"""Centralized configuration for CloudCheckin."""
+"""Centralized configuration for codercheckin."""
 
 import os
 

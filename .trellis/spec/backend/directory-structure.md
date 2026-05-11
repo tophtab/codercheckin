@@ -52,11 +52,11 @@ controller/service/repository, or ORM-based layouts that do not exist here.
 
 Each platform gets its own top-level package.
 
-- Keep one package per platform, for example [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:1), [deepflood/deepflood.py](/home/toph/CloudCheckin/deepflood/deepflood.py:1), and [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:1).
+- Keep one package per platform, for example [nodeseek/nodeseek.py](/home/toph/codercheckin/nodeseek/nodeseek.py:1), [deepflood/deepflood.py](/home/toph/codercheckin/deepflood/deepflood.py:1), and [v2ex/v2ex.py](/home/toph/codercheckin/v2ex/v2ex.py:1).
 - Put platform-specific request headers, endpoint URLs, parsing logic, and message formatting inside that platform package.
-- Put shared notification behavior in [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1) rather than re-implementing Telegram calls in each platform module.
-- Put cross-platform integrations in a small top-level helper package when multiple platform scripts need the same behavior, as in [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:1).
-- Put shared platform execution behavior in small top-level helpers when two or more platform modules genuinely use the same flow, as in [attendance_checkin.py](/home/toph/CloudCheckin/attendance_checkin.py:1) for NodeSeek and DeepFlood attendance requests.
+- Put shared notification behavior in [telegram/notify.py](/home/toph/codercheckin/telegram/notify.py:1) rather than re-implementing Telegram calls in each platform module.
+- Put cross-platform integrations in a small top-level helper package when multiple platform scripts need the same behavior, as in [cookiecloud/client.py](/home/toph/codercheckin/cookiecloud/client.py:1).
+- Put shared platform execution behavior in small top-level helpers when two or more platform modules genuinely use the same flow, as in [attendance_checkin.py](/home/toph/codercheckin/attendance_checkin.py:1) for NodeSeek and DeepFlood attendance requests.
 
 For Python scripts, the package module is both library code and CLI entrypoint.
 The usual pattern is helper functions or configuration at module scope, a
@@ -67,11 +67,11 @@ lookup or external network work.
 
 Examples:
 
-- [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:1) defines helpers first and executes the flow from `main()`.
-- [attendance_checkin.py](/home/toph/CloudCheckin/attendance_checkin.py:1) holds the shared attendance flow used by platform modules whose behavior only differs by endpoint, domains, and labels.
-- [run.py](/home/toph/CloudCheckin/run.py:1) is the one-shot batch entrypoint and shells out to existing module entrypoints instead of re-implementing their flows.
-- [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1) is the long-running Docker/NAS scheduler entrypoint that triggers batch runs from `CHECKIN_CRON`.
-- [checkin_runner.py](/home/toph/CloudCheckin/checkin_runner.py:1) holds the shared target parsing and subprocess execution logic used by both entrypoints.
+- [v2ex/v2ex.py](/home/toph/codercheckin/v2ex/v2ex.py:1) defines helpers first and executes the flow from `main()`.
+- [attendance_checkin.py](/home/toph/codercheckin/attendance_checkin.py:1) holds the shared attendance flow used by platform modules whose behavior only differs by endpoint, domains, and labels.
+- [run.py](/home/toph/codercheckin/run.py:1) is the one-shot batch entrypoint and shells out to existing module entrypoints instead of re-implementing their flows.
+- [scheduler.py](/home/toph/codercheckin/scheduler.py:1) is the long-running Docker/NAS scheduler entrypoint that triggers batch runs from `CHECKIN_CRON`.
+- [checkin_runner.py](/home/toph/codercheckin/checkin_runner.py:1) holds the shared target parsing and subprocess execution logic used by both entrypoints.
 
 ---
 
@@ -81,7 +81,7 @@ Examples:
 - Keep the main module name the same as the package name when the package has a single executable entrypoint, for example `v2ex/v2ex.py`.
 - Use `snake_case` for Python functions and variables.
 - Use `UPPER_SNAKE_CASE` for environment variable names such as `V2EX_COOKIE`, `NODESEEK_COOKIE`, `DEEPFLOOD_COOKIE`, and `TELEGRAM_TOKEN`.
-- Keep shared constant maps simple and explicit, for example the `MODULES` dict in [checkin_runner.py](/home/toph/CloudCheckin/checkin_runner.py:6).
+- Keep shared constant maps simple and explicit, for example the `MODULES` dict in [checkin_runner.py](/home/toph/codercheckin/checkin_runner.py:6).
 
 ---
 
@@ -90,9 +90,9 @@ Examples:
 - Load local environment variables near module startup with `load_dotenv()` for Python scripts that run locally.
 - Keep per-platform request headers close to the code that uses them.
 - Import the shared notification helper rather than duplicating outbound Telegram code.
-- Use `python -m <package>.<module>` as the expected local execution path, matching the commands documented in [README.md](/home/toph/CloudCheckin/README.md:155).
-- For Docker or NAS execution, keep the entrypoint thin and delegate to the existing `python -m ...` commands, as in [checkin_runner.py](/home/toph/CloudCheckin/checkin_runner.py:1).
-- Keep long-running schedule concerns in [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1) instead of embedding sleep/cron loops into each platform module.
+- Use `python -m <package>.<module>` as the expected local execution path, matching the commands documented in [README.md](/home/toph/codercheckin/README.md:155).
+- For Docker or NAS execution, keep the entrypoint thin and delegate to the existing `python -m ...` commands, as in [checkin_runner.py](/home/toph/codercheckin/checkin_runner.py:1).
+- Keep long-running schedule concerns in [scheduler.py](/home/toph/codercheckin/scheduler.py:1) instead of embedding sleep/cron loops into each platform module.
 
 ---
 
@@ -100,7 +100,7 @@ Examples:
 
 - Do not introduce a fake `src/` or web-service layering model unless the repository architecture actually changes.
 - Do not place secrets or local cookies in tracked files. This project expects secrets from environment variables only.
-- Do not duplicate the Telegram HTTP client in each platform script when [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1) already exists.
+- Do not duplicate the Telegram HTTP client in each platform script when [telegram/notify.py](/home/toph/codercheckin/telegram/notify.py:1) already exists.
 - Do not make the Docker batch runner import platform modules directly just to execute them. Platform modules should be import-safe, but the runner should still execute their CLI entrypoints as subprocesses so local `python -m ...` behavior matches Docker/NAS behavior.
 - Do not fold scheduler behavior into `run.py` if that would blur the difference between one-shot execution and long-running container orchestration.
 
@@ -108,8 +108,8 @@ Examples:
 
 ## Examples
 
-- Platform package with module entrypoint: [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:1)
-- Shared attendance helper: [attendance_checkin.py](/home/toph/CloudCheckin/attendance_checkin.py:1)
-- Shared notification helper: [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1)
-- One-shot batch entrypoint: [run.py](/home/toph/CloudCheckin/run.py:1)
-- Long-running scheduler entrypoint: [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1)
+- Platform package with module entrypoint: [nodeseek/nodeseek.py](/home/toph/codercheckin/nodeseek/nodeseek.py:1)
+- Shared attendance helper: [attendance_checkin.py](/home/toph/codercheckin/attendance_checkin.py:1)
+- Shared notification helper: [telegram/notify.py](/home/toph/codercheckin/telegram/notify.py:1)
+- One-shot batch entrypoint: [run.py](/home/toph/codercheckin/run.py:1)
+- Long-running scheduler entrypoint: [scheduler.py](/home/toph/codercheckin/scheduler.py:1)

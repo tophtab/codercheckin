@@ -1,5 +1,5 @@
 services:
-  cloudcheckin:
+  codercheckin:
     build:
       context: .
-    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
+    image: ${CODERCHECKIN_IMAGE:-tophtab/codercheckin:latest}

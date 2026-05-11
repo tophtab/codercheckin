@@ -22,7 +22,7 @@ unless there is a clear maintenance problem to solve.
 ## Forbidden Patterns
 
 - Do not hardcode cookies, tokens, or chat IDs in source files.
-- Do not switch a new HTTP flow back to `requests` when the project already prefers `curl_cffi` for sites with stronger anti-bot checks. This preference is documented in [README.md](/home/toph/CloudCheckin/README.md:188).
+- Do not switch a new HTTP flow back to `requests` when the project already prefers `curl_cffi` for sites with stronger anti-bot checks. This preference is documented in [README.md](/home/toph/codercheckin/README.md:188).
 - Do not duplicate Telegram notification logic in platform scripts.
 - Do not ignore return values such as `False`, `None`, or missing parsed data from helper functions.
 - Do not introduce large architectural abstractions for one-off platform logic unless multiple modules genuinely need them.
@@ -40,10 +40,10 @@ unless there is a clear maintenance problem to solve.
 
 Examples:
 
-- Shared Telegram helper reuse in [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:6), [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:7), and [deepflood/deepflood.py](/home/toph/CloudCheckin/deepflood/deepflood.py:7).
-- Shared attendance request reuse in [attendance_checkin.py](/home/toph/CloudCheckin/attendance_checkin.py:1), with platform-specific configuration kept in [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:1) and [deepflood/deepflood.py](/home/toph/CloudCheckin/deepflood/deepflood.py:1).
-- Environment validation in [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:102).
-- Local debug execution commands in [README.md](/home/toph/CloudCheckin/README.md:153).
+- Shared Telegram helper reuse in [v2ex/v2ex.py](/home/toph/codercheckin/v2ex/v2ex.py:6), [nodeseek/nodeseek.py](/home/toph/codercheckin/nodeseek/nodeseek.py:7), and [deepflood/deepflood.py](/home/toph/codercheckin/deepflood/deepflood.py:7).
+- Shared attendance request reuse in [attendance_checkin.py](/home/toph/codercheckin/attendance_checkin.py:1), with platform-specific configuration kept in [nodeseek/nodeseek.py](/home/toph/codercheckin/nodeseek/nodeseek.py:1) and [deepflood/deepflood.py](/home/toph/codercheckin/deepflood/deepflood.py:1).
+- Environment validation in [v2ex/v2ex.py](/home/toph/codercheckin/v2ex/v2ex.py:102).
+- Local debug execution commands in [README.md](/home/toph/codercheckin/README.md:153).
 
 ## Scenario: Docker scheduler, runner, and Cookie Cloud fallback
 
@@ -60,7 +60,7 @@ Examples:
 - Startup cookie validation signature: `validate_target_cookies(targets: list[str]) -> None`
 - Scheduler timezone env: `TZ=Asia/Shanghai`
 - Scheduler cron env: `CHECKIN_CRON=30 3 * * *`
-- Deployment image env: `CLOUDCHECKIN_IMAGE=tophtab/cloudcheckin:latest`
+- Deployment image env: `CODERCHECKIN_IMAGE=tophtab/codercheckin:latest`
 - Shared resolver signature: `get_cookie_value(env_name: str, domains: list[str]) -> str`
 - Shared attendance signature: `run_attendance_checkin(config: AttendanceConfig, *, get_cookie, notify, sleep, randint, post, timeout) -> int`
 - Cookie Cloud endpoint shape: `POST <COOKIE_CLOUD_URL>/get/<COOKIE_CLOUD_UUID>?crypto_type=...`
@@ -159,7 +159,7 @@ Examples:
 | V2EX `/balance` has today's reward row but no parseable reward amount | Treat confirmation as successful, but keep the generic success message instead of guessing |
 | `CHECKIN_CRON` is invalid | `scheduler.py` exits non-zero before entering the loop |
 | `TZ` is invalid | `scheduler.py` exits non-zero before entering the loop |
-| Server runs `docker compose` with default files | Compose pulls `CLOUDCHECKIN_IMAGE` instead of building locally |
+| Server runs `docker compose` with default files | Compose pulls `CODERCHECKIN_IMAGE` instead of building locally |
 | Local developer needs to build current source | Compose uses `docker-compose.build.yml` as an explicit override |
 | Docker image is built from the repository root | `/app` contains runtime Python modules and `requirements.txt`, but not `.env`, `.agents`, `.codex`, `.claude`, `.cursor`, `.trellis`, `.venv`, `.pytest_cache`, or `tests` |
 | Low-risk Docker image slimming is applied | Image still builds from `python:3.11-slim`, scheduler starts with placeholder cookie config, and `/usr/local/lib/python3.11` contains no generated `*.pyc` or `__pycache__` files |
@@ -169,10 +169,10 @@ Examples:
 
 ### 5. Good / Base / Bad Cases
 
-- Good: `V2EX_COOKIE` is set explicitly, so [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:11) uses it without any Cookie Cloud dependency.
-- Base: `NODESEEK_COOKIE` is empty, Cookie Cloud is configured, and [cookiecloud/client.py](/home/toph/CloudCheckin/cookiecloud/client.py:20) builds the cookie header from the matched domain payload.
-- Bad: `V2EX_COOKIE` is empty and Cookie Cloud has no matching `v2ex.com` cookie, so [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:102) raises before the sign-in flow starts.
-- Good: [scheduler.py](/home/toph/CloudCheckin/scheduler.py:1) starts with `TZ=Asia/Shanghai` and `CHECKIN_CRON=30 3 * * *`, logs the next run, and then delegates to [checkin_runner.py](/home/toph/CloudCheckin/checkin_runner.py:1).
+- Good: `V2EX_COOKIE` is set explicitly, so [v2ex/v2ex.py](/home/toph/codercheckin/v2ex/v2ex.py:11) uses it without any Cookie Cloud dependency.
+- Base: `NODESEEK_COOKIE` is empty, Cookie Cloud is configured, and [cookiecloud/client.py](/home/toph/codercheckin/cookiecloud/client.py:20) builds the cookie header from the matched domain payload.
+- Bad: `V2EX_COOKIE` is empty and Cookie Cloud has no matching `v2ex.com` cookie, so [v2ex/v2ex.py](/home/toph/codercheckin/v2ex/v2ex.py:102) raises before the sign-in flow starts.
+- Good: [scheduler.py](/home/toph/codercheckin/scheduler.py:1) starts with `TZ=Asia/Shanghai` and `CHECKIN_CRON=30 3 * * *`, logs the next run, and then delegates to [checkin_runner.py](/home/toph/codercheckin/checkin_runner.py:1).
 - Base: `scheduler.py` calls `validate_target_cookies(parse_targets())` once at
   startup, before computing the first next-run timestamp.
 - Bad: `scheduler.py` waits until the first cron execution to discover that the
@@ -316,7 +316,7 @@ if failures:
 ### 1. Scope / Trigger
 
 - Trigger: changing the V2EX daily mission request flow, success detection, or
-  optional balance parsing in [v2ex/v2ex.py](/home/toph/CloudCheckin/v2ex/v2ex.py:1).
+  optional balance parsing in [v2ex/v2ex.py](/home/toph/codercheckin/v2ex/v2ex.py:1).
 
 ### 2. Signatures
 
@@ -413,10 +413,10 @@ if success and balance(headers) == (None, None):
 
 The repository now has a minimal `pytest` entrypoint configured through:
 
-- [pyproject.toml](/home/toph/CloudCheckin/pyproject.toml:1)
-- [pytest.ini](/home/toph/CloudCheckin/pytest.ini:1)
-- [tests/test_checkin_response.py](/home/toph/CloudCheckin/tests/test_checkin_response.py:1)
-- [tests/test_checkin_runner.py](/home/toph/CloudCheckin/tests/test_checkin_runner.py:1)
+- [pyproject.toml](/home/toph/codercheckin/pyproject.toml:1)
+- [pytest.ini](/home/toph/codercheckin/pytest.ini:1)
+- [tests/test_checkin_response.py](/home/toph/codercheckin/tests/test_checkin_response.py:1)
+- [tests/test_checkin_runner.py](/home/toph/codercheckin/tests/test_checkin_runner.py:1)
 
 Minimum verification for backend changes:
 
@@ -432,7 +432,7 @@ the `tests/` suite instead of leaving the behavior manual-only.
 ### Browser Identity Header Changes
 
 When changing browser identity headers, update the shared constants in
-[config.py](/home/toph/CloudCheckin/config.py:1) first, then make platform
+[config.py](/home/toph/codercheckin/config.py:1) first, then make platform
 modules reuse those constants instead of introducing another hardcoded UA.
 
 Keep the following values consistent when the user's primary browser changes:

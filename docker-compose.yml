@@ -1,6 +1,6 @@
 services:
-  cloudcheckin:
-    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
+  codercheckin:
+    image: ${CODERCHECKIN_IMAGE:-tophtab/codercheckin:latest}
     restart: unless-stopped
     env_file:
       - .env

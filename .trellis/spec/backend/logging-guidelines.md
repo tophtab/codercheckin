@@ -30,9 +30,9 @@ these practical categories:
 
 Examples:
 
-- Progress logs in [nodeseek/nodeseek.py](/home/toph/CloudCheckin/nodeseek/nodeseek.py:29) announce account index, delay, status code, and response text.
-- Scheduler progress logs in [scheduler.py](/home/toph/CloudCheckin/scheduler.py:41) record the cron configuration, next run, and run boundaries.
-- Error logs in [telegram/notify.py](/home/toph/CloudCheckin/telegram/notify.py:1) and platform scripts print explicit failure messages.
+- Progress logs in [nodeseek/nodeseek.py](/home/toph/codercheckin/nodeseek/nodeseek.py:29) announce account index, delay, status code, and response text.
+- Scheduler progress logs in [scheduler.py](/home/toph/codercheckin/scheduler.py:41) record the cron configuration, next run, and run boundaries.
+- Error logs in [telegram/notify.py](/home/toph/codercheckin/telegram/notify.py:1) and platform scripts print explicit failure messages.
 
 ### Scheduler Wait Visibility
 
@@ -56,7 +56,7 @@ Current conventions to preserve:
 - Use the process/local timezone for the log prefix; do not hard-code a timezone
   offset in call sites.
 - Preserve the existing message text after the timestamp prefix.
-- Include timestamps when the event timing matters, as in [scheduler.py](/home/toph/CloudCheckin/scheduler.py:50).
+- Include timestamps when the event timing matters, as in [scheduler.py](/home/toph/codercheckin/scheduler.py:50).
 
 If future work adds a logging library, keep the output simple and compatible with
 container logs unless there is a clear operational need for more structure.
@@ -153,9 +153,9 @@ log("Cookie Cloud payload decrypted client-side")
 
 Examples:
 
-- [deepflood/deepflood.py](/home/toph/CloudCheckin/deepflood/deepflood.py:31) logs account selection and randomized delay.
-- [deepflood/deepflood.py](/home/toph/CloudCheckin/deepflood/deepflood.py:42) logs status code and response content.
-- [scheduler.py](/home/toph/CloudCheckin/scheduler.py:41) logs scheduler startup and next-run timestamps.
+- [deepflood/deepflood.py](/home/toph/codercheckin/deepflood/deepflood.py:31) logs account selection and randomized delay.
+- [deepflood/deepflood.py](/home/toph/codercheckin/deepflood/deepflood.py:42) logs status code and response content.
+- [scheduler.py](/home/toph/codercheckin/scheduler.py:41) logs scheduler startup and next-run timestamps.
 
 ---
 

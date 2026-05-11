@@ -1,4 +1,4 @@
-# CloudCheckin
+# codercheckin
 
 多平台自动签到工具，适合 Docker / NAS 部署。支持 Cookie Cloud 同步 Cookie、Telegram 通知和定时执行。
 
@@ -8,8 +8,8 @@
 
 ```yaml
 services:
-  cloudcheckin:
-    image: ${CLOUDCHECKIN_IMAGE:-tophtab/cloudcheckin:latest}
+  codercheckin:
+    image: ${CODERCHECKIN_IMAGE:-tophtab/codercheckin:latest}
     restart: unless-stopped
     env_file:
       - .env
@@ -50,7 +50,7 @@ TELEGRAM_CHAT_ID=your_chat_id
 
 ```bash
 docker compose up -d
-docker compose logs -f cloudcheckin
+docker compose logs -f codercheckin
 ```
 
 更新镜像：
@@ -63,7 +63,7 @@ docker compose up -d
 立即执行一次：
 
 ```bash
-docker compose run --rm cloudcheckin python run.py
+docker compose run --rm codercheckin python run.py
 ```
 
 ## 支持平台
@@ -77,8 +77,8 @@ docker compose run --rm cloudcheckin python run.py
 ## 使用仓库模板
 
 ```bash
-git clone https://github.com/tophtab/CloudCheckin.git
-cd CloudCheckin
+git clone https://github.com/tophtab/codercheckin.git
+cd codercheckin
 cp .env.localtest.example .env
 docker compose up -d
 ```
