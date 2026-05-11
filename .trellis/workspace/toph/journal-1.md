@@ -874,3 +874,36 @@ Aligned check-in browser identity headers with the user's Chrome 132 UA, kept dy
 ### Next Steps
 
 - None - task complete
+
+
+## Session 25: Show V2EX check-in copper reward
+
+**Date**: 2026-05-11
+**Task**: Show V2EX check-in copper reward
+**Branch**: `main`
+
+### Summary
+
+Implemented V2EX daily reward amount parsing from the balance page, updated success logs and Telegram messages, verified against a real balance row shape, added regression tests, and documented the V2EX balance parsing contract.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `93c136e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

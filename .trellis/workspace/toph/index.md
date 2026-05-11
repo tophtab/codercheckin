@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 24
-- **Last Active**: 2026-05-09
+- **Total Sessions**: 25
+- **Last Active**: 2026-05-11
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~876 | Active |
+| `journal-1.md` | ~909 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 25 | 2026-05-11 | Show V2EX check-in copper reward | `93c136e` | `main` |
 | 24 | 2026-05-09 | Align check-in browser headers | `7f8e361` | `main` |
 | 23 | 2026-05-09 | Fix V2EX session cookie flow | `cd57e26` | `main` |
 | 22 | 2026-05-08 | Slim Docker image build | `1189d97` | `main` |
