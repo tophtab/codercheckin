@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 25
+- **Total Sessions**: 26
 - **Last Active**: 2026-05-11
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~909 | Active |
+| `journal-1.md` | ~942 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 26 | 2026-05-11 | Rename project to codercheckin | `6791027` | `main` |
 | 25 | 2026-05-11 | Show V2EX check-in copper reward | `93c136e` | `main` |
 | 24 | 2026-05-09 | Align check-in browser headers | `7f8e361` | `main` |
 | 23 | 2026-05-09 | Fix V2EX session cookie flow | `cd57e26` | `main` |

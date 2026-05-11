@@ -907,3 +907,36 @@ Implemented V2EX daily reward amount parsing from the balance page, updated succ
 ### Next Steps
 
 - None - task complete
+
+
+## Session 26: Rename project to codercheckin
+
+**Date**: 2026-05-11
+**Task**: Rename project to codercheckin
+**Branch**: `main`
+
+### Summary
+
+Renamed the fork identity, docs, Docker service/image defaults, package metadata, local checkout path, and remote URL to codercheckin; verified py_compile and pytest.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6791027` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
