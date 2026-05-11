@@ -162,11 +162,11 @@ def test_check_in_requests_action_then_confirms_from_today_balance_entry(
     success, message = v2ex.check_in(action_url, {}, "V2EX\n")
 
     assert success is True
-    assert "Check in successfully" in message
+    assert "Check in successfully, got +1 copper" in message
     assert calls == [action_url, v2ex.BALANCE_URL]
     output_lines = assert_timestamped_lines(capsys.readouterr().out)
     assert any(
-        "V2EX balance page confirms today's daily reward" in line
+        "V2EX balance page confirms today's daily reward: +1 copper" in line
         for line in output_lines
     )
     assert all("redacted-once" not in line for line in output_lines)
@@ -239,7 +239,7 @@ def test_shared_session_preserves_mission_cookies_for_redeem_and_balance(
     assert signed is False
     assert action_url_result == action_url
     assert success is True
-    assert "Check in successfully" in message
+    assert "Check in successfully, got +1 copper" in message
     assert [call[0] for call in session.calls] == [
         v2ex.MISSION_DAILY_URL,
         action_url,
@@ -374,15 +374,16 @@ def test_check_in_does_not_log_action_token_when_redeem_request_fails(
     assert "secret-once-token" not in output_lines[0]
 
 
-def test_parse_balance_daily_rewards_keeps_timestamp_with_own_row() -> None:
+def test_parse_balance_daily_rewards_keeps_timestamp_with_own_reward_delta() -> None:
     today = "2026-05-08"
     balance_html = f"""
     <table>
       <tr>
         <td class="d"><small class="gray">{today} 10:00:51 +08:00</small></td>
         <td class="d">每日登录奖励</td>
-        <td class="d" style="text-align: right;">+1</td>
+        <td class="d" style="text-align: right;"><span class="positive"><strong>9.0</strong></span></td>
         <td class="d" style="text-align: right;">13665.28</td>
+        <td class="d"><span class="gray">20260508 的每日登录奖励 9 铜币</span></td>
       </tr>
       <tr>
         <td class="d"><small class="gray">2026-05-07 10:00:51 +08:00</small></td>
@@ -396,9 +397,47 @@ def test_parse_balance_daily_rewards_keeps_timestamp_with_own_row() -> None:
     entries = v2ex._parse_balance_daily_rewards(balance_html)
 
     assert entries == [
-        (f"{today} 10:00:51 +08:00", "13665.28"),
-        ("2026-05-07 10:00:51 +08:00", "13664.28"),
+        (f"{today} 10:00:51 +08:00", "9"),
+        ("2026-05-07 10:00:51 +08:00", "+1"),
     ]
+
+
+def test_check_in_keeps_generic_success_when_reward_delta_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    today = "2026-05-08"
+    action_url = "https://www.v2ex.com/mission/daily/redeem?once=redacted-once"
+    balance_html = f"""
+    <table>
+      <tr>
+        <td class="d"><small class="gray">{today} 15:22:00 +08:00</small></td>
+        <td class="d">每日登录奖励</td>
+      </tr>
+    </table>
+    """
+    monkeypatch.setattr(v2ex, "_today_local_date", lambda: today)
+
+    def fetch_page(url: str, headers: dict[str, str]) -> str:
+        if url == action_url:
+            return "redeem response changed"
+        if url == v2ex.BALANCE_URL:
+            return balance_html
+        raise AssertionError(f"unexpected url: {url}")
+
+    monkeypatch.setattr(v2ex, "_fetch_page", fetch_page)
+
+    success, message = v2ex.check_in(action_url, {}, "V2EX\n")
+
+    assert success is True
+    assert "Check in successfully\n" in message
+    assert "copper" not in message
+    output_lines = assert_timestamped_lines(capsys.readouterr().out)
+    assert any(
+        "V2EX balance page confirms today's daily reward" in line
+        for line in output_lines
+    )
+    assert all("copper" not in line for line in output_lines)
 
 
 def test_check_in_fails_when_balance_is_ambiguous(
@@ -482,6 +521,9 @@ def test_main_keeps_success_when_balance_parsing_fails(
 
     output_lines = assert_timestamped_lines(capsys.readouterr().out)
     assert len(output_lines) == 1
-    assert "V2EX balance parsing failed after successful redeem" in output_lines[0]
+    assert (
+        "V2EX balance reward amount parsing failed after successful redeem"
+        in output_lines[0]
+    )
     assert len(notifications) == 1
     assert "Check in successfully" in notifications[0]

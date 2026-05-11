@@ -49,6 +49,8 @@ BALANCE_RIGHT_TD_PATTERN = re.compile(
     r"(.*?)</td>",
     re.DOTALL | re.IGNORECASE,
 )
+BALANCE_REWARD_DESCRIPTION_PATTERN = re.compile(r"每日登录奖励\s*(\d+(?:\.\d+)?)\s*铜币")
+BALANCE_REWARD_DELTA_PATTERN = re.compile(r"^[+-]?\s*\d+(?:\.\d+)?$")
 
 
 def _is_supported_mission_action_path(path: str) -> bool:
@@ -201,21 +203,55 @@ def _strip_html(value: str) -> str:
     return unescape(HTML_TAG_PATTERN.sub("", value)).strip()
 
 
+def _format_reward_delta(value: str) -> str:
+    reward_delta = value.replace(",", "").replace(" ", "").strip()
+    if not reward_delta:
+        return ""
+
+    sign = ""
+    if reward_delta[0] in "+-":
+        sign = reward_delta[0]
+        reward_delta = reward_delta[1:]
+
+    if "." in reward_delta:
+        reward_delta = reward_delta.rstrip("0").rstrip(".")
+
+    return f"{sign}{reward_delta}" if reward_delta else ""
+
+
 def _parse_balance_daily_rewards(content: str) -> list[tuple[str, str]]:
     entries = []
     for row in BALANCE_ROW_PATTERN.findall(content):
-        if "每日登录奖励" not in _strip_html(row):
+        row_text = _strip_html(row)
+        if "每日登录奖励" not in row_text:
             continue
 
         time_match = BALANCE_SMALL_GRAY_PATTERN.search(row)
         if not time_match:
             continue
 
+        description_match = BALANCE_REWARD_DESCRIPTION_PATTERN.search(row_text)
+        if description_match:
+            entries.append(
+                (
+                    _strip_html(time_match.group(1)),
+                    _format_reward_delta(description_match.group(1)),
+                )
+            )
+            continue
+
         right_values = [
             _strip_html(value) for value in BALANCE_RIGHT_TD_PATTERN.findall(row)
         ]
-        reward_value = right_values[-1] if right_values else ""
-        entries.append((_strip_html(time_match.group(1)), reward_value))
+        reward_delta = next(
+            (
+                _format_reward_delta(value)
+                for value in right_values
+                if BALANCE_REWARD_DELTA_PATTERN.match(value.replace(",", ""))
+            ),
+            "",
+        )
+        entries.append((_strip_html(time_match.group(1)), reward_delta))
 
     return entries
 
@@ -230,20 +266,29 @@ def _balance_time_is_today(balance_time: str) -> bool:
 def _balance_confirms_today_daily_reward(
     headers: dict[str, str],
     session: requests.Session | None = None,
-) -> bool:
+) -> tuple[bool, str | None]:
     try:
         content = _fetch_page_with_session(BALANCE_URL, headers, session)
     except Exception as exc:
         log(f"V2EX balance confirmation failed: {type(exc).__name__}")
-        return False
+        return False, None
 
     entries = _parse_balance_daily_rewards(content)
-    if any(_balance_time_is_today(reward_time) for reward_time, _ in entries):
-        log("V2EX balance page confirms today's daily reward")
-        return True
+    for reward_time, reward_delta in entries:
+        if not _balance_time_is_today(reward_time):
+            continue
+
+        if reward_delta:
+            log(
+                "V2EX balance page confirms today's daily reward: "
+                f"{reward_delta} copper"
+            )
+        else:
+            log("V2EX balance page confirms today's daily reward")
+        return True, reward_delta or None
 
     log("V2EX balance page did not confirm today's daily reward")
-    return False
+    return False, None
 
 
 def get_daily_mission_action(
@@ -312,7 +357,13 @@ def check_in(
             message + "Fail to check in: cookie is unauthenticated or expired\n",
         )
 
-    if _balance_confirms_today_daily_reward(headers, session):
+    confirmed, reward_delta = _balance_confirms_today_daily_reward(headers, session)
+    if confirmed:
+        if reward_delta:
+            return (
+                True,
+                message + f"Check in successfully, got {reward_delta} copper\n",
+            )
         return True, message + "Check in successfully\n"
 
     log("V2EX balance page did not confirm today's reward after redeem action")
@@ -362,9 +413,9 @@ def main() -> int:
         send_tg_notification(message)
         raise ValueError("V2EX redeem request did not complete successfully")
 
-    balance_time, balance_value = balance(headers, session)
-    if not balance_time or not balance_value:
-        log("V2EX balance parsing failed after successful redeem")
+    balance_time, reward_delta = balance(headers, session)
+    if not balance_time or not reward_delta:
+        log("V2EX balance reward amount parsing failed after successful redeem")
 
     send_tg_notification(message)
     return 0

@@ -95,6 +95,11 @@ Examples:
 - If no direct cookie exists and Cookie Cloud cannot provide a matching domain cookie, the platform script must still fail fast before making network requests.
 - Platform modules must be safe to import in tests: importing `nodeseek.nodeseek`, `deepflood.deepflood`, or `v2ex.v2ex` must not read cookies or call external services.
 - External requests must set a finite timeout so NAS scheduler subprocesses cannot hang indefinitely on one platform.
+- V2EX daily reward confirmation must use the `/balance` row whose timestamp is
+  today and whose text contains `每日登录奖励`. When displaying the earned copper
+  amount, prefer row description text shaped like `每日登录奖励 N 铜币`; fall back
+  to the first right-aligned reward amount only when the description is not
+  present. Do not use the final right-aligned balance cell as the reward amount.
 - `CHECKIN_CRON` must be a valid 5-field cron expression.
 - `TZ` must be a valid IANA timezone name accepted by `zoneinfo`.
 - `run_targets()` must execute configured targets in order, print each target's
@@ -150,6 +155,8 @@ Examples:
 | Platform reports "already checked in" | Treat as a successful, idempotent run instead of failing the batch |
 | Platform JSON returns `success: false` | Treat as a business failure even if HTTP status is `200`, unless the message is an idempotent already-checked-in response |
 | Platform module is imported by tests or tooling | Import succeeds without cookie lookup, sleeps, HTTP requests, or Telegram sends |
+| V2EX `/balance` has today's `每日登录奖励` row with description `每日登录奖励 N 铜币` | Treat check-in as successful and display `N` as the earned copper amount |
+| V2EX `/balance` has today's reward row but no parseable reward amount | Treat confirmation as successful, but keep the generic success message instead of guessing |
 | `CHECKIN_CRON` is invalid | `scheduler.py` exits non-zero before entering the loop |
 | `TZ` is invalid | `scheduler.py` exits non-zero before entering the loop |
 | Server runs `docker compose` with default files | Compose pulls `CLOUDCHECKIN_IMAGE` instead of building locally |
@@ -191,6 +198,9 @@ Examples:
   every failed target.
 - Validate shared attendance behavior with isolated tests for multi-account cookies, request timeout propagation, and business failure responses.
 - Validate platform module imports do not trigger check-in side effects.
+- Validate V2EX balance parsing against real reward row shapes, including a
+  description cell like `每日登录奖励 9 铜币`, and assert the success message/log
+  includes the parsed copper amount.
 - Validate deployment compose wiring with `docker compose config` after providing a local `.env` file copied from `.env.localtest.example`.
 - Validate local build override wiring with `docker compose -f docker-compose.yml -f docker-compose.build.yml config`.
 - Validate Docker build context hygiene with a local image build and an image
