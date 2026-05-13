@@ -6,7 +6,10 @@
 
 ## Overview
 
-This directory contains guidelines for backend development. Fill in each file with your project's specific conventions.
+This directory contains the current backend conventions for codercheckin, a
+Python 3.11 multi-platform check-in automation service. The project is packaged
+as a single repo with root-level orchestration modules plus small packages for
+platform integrations and external services.
 
 ---
 
@@ -14,24 +17,27 @@ This directory contains guidelines for backend development. Fill in each file wi
 
 | Guide | Description | Status |
 |-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
-| [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
+| [Directory Structure](./directory-structure.md) | Module organization and file layout | Filled |
+| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | Filled |
+| [Error Handling](./error-handling.md) | Error types, handling strategies | Filled |
+| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Filled |
+| [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | Filled |
 
 ---
 
-## How to Fill These Guidelines
+## Pre-Development Checklist
 
-For each guideline file:
+Before editing backend code:
 
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
+1. Read [Directory Structure](./directory-structure.md) before adding or moving
+   modules.
+2. Read [Error Handling](./error-handling.md) before changing process flow,
+   network calls, or target execution.
+3. Read [Logging Guidelines](./logging-guidelines.md) before adding log output.
+4. Read [Quality Guidelines](./quality-guidelines.md) before writing or updating
+   tests.
+5. Read [Database Guidelines](./database-guidelines.md) only if a change proposes
+   persistent storage; the current project intentionally has no database layer.
 
 ---
 
