@@ -1,4 +1,0 @@
-{"file": ".agents/skills/trellis-meta/references/local-architecture/overview.md", "reason": "Review ignore rules against Trellis local architecture."}
-{"file": ".agents/skills/trellis-meta/references/local-architecture/generated-files.md", "reason": "Verify generated/runtime files are correctly classified."}
-{"file": ".agents/skills/trellis-meta/references/local-architecture/workspace-memory.md", "reason": "Verify workspace memory is not accidentally ignored."}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Check repository hygiene and no-secret expectations."}

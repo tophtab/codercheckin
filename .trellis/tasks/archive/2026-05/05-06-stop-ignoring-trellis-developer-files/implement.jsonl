@@ -1,4 +1,0 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
-{"file": ".agents/skills/trellis-meta/references/local-architecture/overview.md", "reason": "Understand local Trellis architecture boundaries for .trellis changes."}
-{"file": ".agents/skills/trellis-meta/references/local-architecture/workspace-memory.md", "reason": "Understand the intended role of .trellis/.developer and workspace memory files."}
-{"file": ".agents/skills/trellis-meta/references/local-architecture/task-system.md", "reason": "Understand session-scoped runtime files under .trellis/.runtime and why they stay ignored."}

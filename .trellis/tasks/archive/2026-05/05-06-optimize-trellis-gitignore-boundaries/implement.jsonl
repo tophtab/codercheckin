@@ -1,4 +1,0 @@
-{"file": ".agents/skills/trellis-meta/references/local-architecture/overview.md", "reason": "Defines Trellis local architecture and core path responsibilities."}
-{"file": ".agents/skills/trellis-meta/references/local-architecture/generated-files.md", "reason": "Documents generated Trellis files and customization boundaries."}
-{"file": ".agents/skills/trellis-meta/references/local-architecture/workspace-memory.md", "reason": "Defines workspace journals and cross-session memory semantics."}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "General project quality and Git hygiene expectations."}

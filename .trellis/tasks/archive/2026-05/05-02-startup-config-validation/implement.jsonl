@@ -1,4 +1,0 @@
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend spec index for startup validation work"}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "Startup validation should fail fast with clear operational errors"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Cookie resolver and scheduler contracts are documented here"}
-{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Validation logs must be useful without leaking secrets"}

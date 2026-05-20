@@ -1,8 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Need to place Docker and shared Cookie Cloud helper without breaking package-per-platform layout"}
-{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Need safe console diagnostics for Docker and Cookie Cloud flows"}
-{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Need one shared Cookie Cloud resolver instead of duplicating fetch logic in each platform"}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "Need fallback and failure behavior for Cookie Cloud network/config errors"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Need to preserve env-based secrets and avoid over-abstracting shared helpers"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Need clear env contract from Docker config to cookie resolution to platform scripts"}
