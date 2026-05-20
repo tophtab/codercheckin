@@ -42,7 +42,7 @@ jobs:
           if [ -n "$DOCKERHUB_IMAGE" ]; then
             image_name="$DOCKERHUB_IMAGE"
           elif [ -n "$DOCKERHUB_USERNAME" ]; then
-            image_name="$DOCKERHUB_USERNAME/cloudcheckin"
+            image_name="$DOCKERHUB_USERNAME/codercheckin"
           else
             echo "::error::Set vars.DOCKERHUB_IMAGE or secret DOCKERHUB_USERNAME to resolve the Docker Hub image name."
             missing=1

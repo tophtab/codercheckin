@@ -81,6 +81,10 @@ These contracts are important enough to check explicitly during review:
 - Docker Compose is the supported NAS deployment contract. GitHub Actions is the
   supported Docker image publishing contract. Do not reintroduce CircleCI or
   Cloudflare Worker deployment files.
+- Docker Hub publishing resolves the target image from `vars.DOCKERHUB_IMAGE`
+  when set; otherwise it falls back to
+  `$DOCKERHUB_USERNAME/codercheckin`. Keep Compose defaults, README examples,
+  and the workflow fallback aligned to the `codercheckin` image name.
 
 ## V2EX Daily Mission Contract
 
