@@ -81,6 +81,11 @@ These contracts are important enough to check explicitly during review:
 - Docker Compose is the supported NAS deployment contract. GitHub Actions is the
   supported Docker image publishing contract. Do not reintroduce CircleCI or
   Cloudflare Worker deployment files.
+- Keep `curl_cffi` pinned to `0.14.0` in both `requirements.txt` and
+  `pyproject.toml`. Version `0.15.0` reproduces curl error 35 with
+  `OPENSSL_internal:invalid library` when connecting to V2EX from the project's
+  `python:3.11-slim` image; validate upgrades inside that image against the
+  V2EX daily mission URL before changing the pin.
 - Docker Hub publishing resolves the target image from `vars.DOCKERHUB_IMAGE`
   when set; otherwise it falls back to
   `$DOCKERHUB_USERNAME/codercheckin`. Keep Compose defaults, README examples,
