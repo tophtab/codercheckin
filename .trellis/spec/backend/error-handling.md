@@ -81,6 +81,78 @@ The scheduler must validate `TZ`, `CHECKIN_CRON`, target names, and safe cookie
 availability before entering the wait loop. Missing cookies for enabled targets
 should fail before logging the next scheduled run.
 
+## Scenario: Scheduled Random Delay and Target Retries
+
+### 1. Scope / Trigger
+
+Scheduled runs tolerate transient network and subprocess failures without
+repeating targets that have already succeeded.
+
+### 2. Signatures
+
+```python
+run_targets(
+    targets: list[str],
+    *,
+    max_attempts: int = 3,
+    retry_delay_seconds: int = 30,
+    sleep: Callable[[float], None] = time.sleep,
+) -> int
+
+apply_random_start_delay(
+    *,
+    randint: Callable[[int, int], int] = random.randint,
+    sleep: Callable[[float], None] = time.sleep,
+) -> int
+```
+
+### 3. Contracts
+
+- Every cron occurrence selects one inclusive random delay from 0 through 1800
+  seconds before calling `run_targets`.
+- Every configured target has at most three total attempts with 30 seconds
+  between failures.
+- Retry state is per target. A successful target is never repeated because a
+  later target fails.
+- No new environment variables control these fixed limits.
+
+### 4. Validation & Error Matrix
+
+| Condition | Result |
+|---|---|
+| First target attempt succeeds | Continue immediately without sleeping |
+| Attempt fails and attempts remain | Log failure, sleep 30 seconds, retry same target |
+| Third attempt fails | Record final attempt output and continue to next target |
+| Subprocess cannot start | Treat as a retryable target failure |
+| One or more targets exhaust retries | Raise existing single or aggregate error after all targets run |
+
+### 5. Good/Base/Bad Cases
+
+- Good: attempt 1 fails, attempt 2 succeeds, and the next target starts once.
+- Base: attempt 1 succeeds and no retry sleep occurs.
+- Bad: all attempts fail; two sleeps occur and the final attempt output is
+  retained in the raised exception.
+
+### 6. Tests Required
+
+- Assert delay generation covers both 0 and 1800 and invokes injected sleep.
+- Assert a later successful attempt stops retries.
+- Assert three failures produce exactly two 30-second sleeps.
+- Assert later targets still execute and successful earlier targets are not
+  repeated.
+- Assert subprocess start failures use the same retry path.
+
+### 7. Wrong vs Correct
+
+```python
+# Wrong: reruns every target after one failure.
+for attempt in range(3):
+    run_targets(targets)
+
+# Correct: retries are owned by run_targets and scoped to one target.
+run_targets(targets)
+```
+
 ---
 
 ## API Error Responses

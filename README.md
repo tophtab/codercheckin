@@ -46,6 +46,9 @@ TELEGRAM_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 ```
 
+每次到达 `CHECKIN_CRON` 设定的时间后，会随机等待 0–30 分钟再开始本轮签到。
+每个平台失败后间隔 30 秒重试，单个平台最多尝试 3 次；已经成功的平台不会重复执行。
+
 启动并查看日志：
 
 ```bash

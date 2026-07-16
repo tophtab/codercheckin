@@ -137,6 +137,83 @@ def test_run_targets_logs_success_for_each_target(
     assert "Check-in target 'v2ex' succeeded" in output
 
 
+def test_run_targets_retries_failed_target_until_success(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls: list[list[str]] = []
+    sleep_calls: list[float] = []
+
+    def fake_popen(command: list[str], **kwargs: object) -> FakeProcess:
+        calls.append(command)
+        return FakeProcess(command, 7 if len(calls) == 1 else 0)
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+
+    assert run_targets(["v2ex"], sleep=sleep_calls.append) == 0
+
+    assert calls == [
+        [sys.executable, "-m", "v2ex.v2ex"],
+        [sys.executable, "-m", "v2ex.v2ex"],
+    ]
+    assert sleep_calls == [30]
+    output = capsys.readouterr().out
+    assert "Retrying check-in target 'v2ex' with attempt 2/3 after 30 seconds" in output
+    assert "Check-in target 'v2ex' succeeded" in output
+
+
+def test_run_targets_exhausts_retries_before_continuing(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls: list[list[str]] = []
+    sleep_calls: list[float] = []
+
+    def fake_popen(command: list[str], **kwargs: object) -> FakeProcess:
+        calls.append(command)
+        if command[-1] == "v2ex.v2ex":
+            attempt = sum(call[-1] == "v2ex.v2ex" for call in calls)
+            return FakeProcess(command, 7, stderr_text=f"attempt {attempt} failed\n")
+        return FakeProcess(command, 0)
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+
+    with pytest.raises(TargetExecutionError) as excinfo:
+        run_targets(["v2ex", "deepflood"], sleep=sleep_calls.append)
+
+    assert calls == [
+        [sys.executable, "-m", "v2ex.v2ex"],
+        [sys.executable, "-m", "v2ex.v2ex"],
+        [sys.executable, "-m", "v2ex.v2ex"],
+        [sys.executable, "-m", "deepflood.deepflood"],
+    ]
+    assert sleep_calls == [30, 30]
+    assert excinfo.value.recent_output == [("stderr", "attempt 3 failed")]
+    output = capsys.readouterr().out
+    assert "Retrying check-in target 'v2ex' with attempt 2/3 after 30 seconds" in output
+    assert "Retrying check-in target 'v2ex' with attempt 3/3 after 30 seconds" in output
+    assert "Check-in target 'deepflood' succeeded" in output
+
+
+def test_run_targets_retries_subprocess_start_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+    sleep_calls: list[float] = []
+
+    def fake_popen(command: list[str], **kwargs: object) -> FakeProcess:
+        calls.append(command)
+        if len(calls) == 1:
+            raise OSError("temporary exec failure")
+        return FakeProcess(command, 0)
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+
+    assert run_targets(["v2ex"], sleep=sleep_calls.append) == 0
+    assert len(calls) == 2
+    assert sleep_calls == [30]
+
+
 def test_run_targets_raises_failure_with_target_context(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -150,7 +227,7 @@ def test_run_targets_raises_failure_with_target_context(
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     with pytest.raises(TargetExecutionError) as excinfo:
-        run_targets(["v2ex", "deepflood"])
+        run_targets(["v2ex", "deepflood"], max_attempts=1)
 
     assert calls == [
         [sys.executable, "-m", "v2ex.v2ex"],
@@ -183,7 +260,7 @@ def test_run_targets_continues_to_v2ex_after_deepflood_failure(
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     with pytest.raises(TargetExecutionError) as excinfo:
-        run_targets(["nodeseek", "deepflood", "v2ex"])
+        run_targets(["nodeseek", "deepflood", "v2ex"], max_attempts=1)
 
     assert calls == [
         [sys.executable, "-m", "nodeseek.nodeseek"],
@@ -221,7 +298,7 @@ def test_run_targets_forwards_output_and_summarizes_recent_failure(
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     with pytest.raises(TargetExecutionError) as excinfo:
-        run_targets(["v2ex", "deepflood"])
+        run_targets(["v2ex", "deepflood"], max_attempts=1)
 
     assert calls == [
         [sys.executable, "-m", "v2ex.v2ex"],
@@ -254,7 +331,7 @@ def test_run_targets_raises_aggregate_failure_for_multiple_failed_targets(
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     with pytest.raises(MultipleTargetExecutionError) as excinfo:
-        run_targets(["v2ex", "deepflood"])
+        run_targets(["v2ex", "deepflood"], max_attempts=1)
 
     assert isinstance(excinfo.value, TargetExecutionError)
     assert [failure.target for failure in excinfo.value.failures] == [
@@ -283,7 +360,7 @@ def test_run_targets_exception_message_uses_bounded_recent_output(
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     with pytest.raises(TargetExecutionError) as excinfo:
-        run_targets(["v2ex"])
+        run_targets(["v2ex"], max_attempts=1)
 
     message = str(excinfo.value)
     assert "  [stdout] stdout line 0\n" not in message
@@ -307,7 +384,7 @@ def test_run_targets_wraps_subprocess_start_failures_with_target_context(
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     with pytest.raises(TargetExecutionError) as excinfo:
-        run_targets(["v2ex", "deepflood"])
+        run_targets(["v2ex", "deepflood"], max_attempts=1)
 
     assert calls == [
         [sys.executable, "-m", "v2ex.v2ex"],

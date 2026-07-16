@@ -2,7 +2,9 @@ import os
 import subprocess
 import sys
 import threading
+import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import IO, TypeAlias
 
@@ -37,6 +39,8 @@ TARGETS = {
 MODULES = {target: config.module_name for target, config in TARGETS.items()}
 
 RECENT_OUTPUT_LINE_LIMIT = 40
+TARGET_MAX_ATTEMPTS = 3
+TARGET_RETRY_DELAY_SECONDS = 30
 
 RecentOutput: TypeAlias = deque[tuple[str, str]]
 
@@ -228,29 +232,52 @@ def _print_failure_output(target: str, recent_output: list[tuple[str, str]]) -> 
         log(line)
 
 
-def run_targets(targets: list[str]) -> int:
+def run_targets(
+    targets: list[str],
+    *,
+    max_attempts: int = TARGET_MAX_ATTEMPTS,
+    retry_delay_seconds: int = TARGET_RETRY_DELAY_SECONDS,
+    sleep: Callable[[float], None] = time.sleep,
+) -> int:
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be at least 1")
+
     failures: list[TargetExecutionError] = []
 
     for target in targets:
         module_name = TARGETS[target].module_name
         log(f"Starting check-in target '{target}' ({module_name})")
-        try:
-            returncode, recent_output = _run_target_process(target, module_name)
-        except TargetExecutionError as err:
-            log(_format_failure_summary(err.target, err.returncode))
-            _print_failure_output(err.target, err.recent_output)
-            failures.append(err)
+        target_error: TargetExecutionError | None = None
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                returncode, recent_output = _run_target_process(target, module_name)
+                if returncode == 0:
+                    target_error = None
+                    break
+                target_error = TargetExecutionError(
+                    target=target,
+                    returncode=returncode,
+                    recent_output=recent_output,
+                )
+            except TargetExecutionError as err:
+                target_error = err
+
+            log(_format_failure_summary(target_error.target, target_error.returncode))
+            _print_failure_output(target_error.target, target_error.recent_output)
+
+            if attempt < max_attempts:
+                log(
+                    f"Retrying check-in target '{target}' with attempt "
+                    f"{attempt + 1}/{max_attempts} after "
+                    f"{retry_delay_seconds} seconds"
+                )
+                sleep(retry_delay_seconds)
+
+        if target_error is not None:
+            failures.append(target_error)
             continue
-        if returncode != 0:
-            error = TargetExecutionError(
-                target=target,
-                returncode=returncode,
-                recent_output=recent_output,
-            )
-            log(_format_failure_summary(error.target, error.returncode))
-            _print_failure_output(error.target, error.recent_output)
-            failures.append(error)
-            continue
+
         log(f"Check-in target '{target}' succeeded")
 
     if len(failures) == 1:

@@ -61,6 +61,30 @@ def test_sleep_until_logs_wait_status_periodically(capsys) -> None:
     ) in output
 
 
+@pytest.mark.parametrize("delay_seconds", [0, scheduler.MAX_RANDOM_START_DELAY_SECONDS])
+def test_apply_random_start_delay_uses_inclusive_boundaries(
+    delay_seconds: int,
+    capsys,
+) -> None:
+    randint_calls = []
+    sleep_calls = []
+
+    def randint(start: int, end: int) -> int:
+        randint_calls.append((start, end))
+        return delay_seconds
+
+    assert (
+        scheduler.apply_random_start_delay(randint=randint, sleep=sleep_calls.append)
+        == delay_seconds
+    )
+
+    assert randint_calls == [(0, scheduler.MAX_RANDOM_START_DELAY_SECONDS)]
+    assert sleep_calls == [delay_seconds]
+    output = capsys.readouterr().out
+    assert_timestamped_lines(output)
+    assert f"({delay_seconds} seconds)" in output
+
+
 def test_main_propagates_target_failure(monkeypatch, capsys) -> None:
     timezone = ZoneInfo("Asia/Shanghai")
     next_run = datetime(2026, 4, 29, 3, 30, 0, tzinfo=timezone)
@@ -75,6 +99,12 @@ def test_main_propagates_target_failure(monkeypatch, capsys) -> None:
     monkeypatch.setattr(scheduler, "validate_target_cookies", lambda targets: None)
     monkeypatch.setattr(scheduler, "get_next_run", lambda now, cron: next_run)
     monkeypatch.setattr(scheduler, "sleep_until", sleep_calls.append)
+    delay_calls = []
+    monkeypatch.setattr(
+        scheduler,
+        "apply_random_start_delay",
+        lambda: delay_calls.append("delay"),
+    )
 
     def fail_run_targets(targets: list[str]) -> int:
         raise TargetExecutionError(
@@ -89,6 +119,7 @@ def test_main_propagates_target_failure(monkeypatch, capsys) -> None:
         scheduler.main()
 
     assert sleep_calls == [next_run]
+    assert delay_calls == ["delay"]
 
     output = capsys.readouterr().out
     assert_timestamped_lines(output)

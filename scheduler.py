@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 import time
 from collections.abc import Callable
@@ -19,6 +20,7 @@ from runtime_log import log
 DEFAULT_CRON = "30 3 * * *"
 DEFAULT_TIMEZONE = "Asia/Shanghai"
 WAIT_STATUS_INTERVAL_SECONDS = 60 * 60
+MAX_RANDOM_START_DELAY_SECONDS = 30 * 60
 
 
 def load_schedule_config() -> tuple[str, str, ZoneInfo]:
@@ -104,6 +106,20 @@ def sleep_until(
         sleep(min(seconds_remaining, 60))
 
 
+def apply_random_start_delay(
+    *,
+    randint: Callable[[int, int], int] = random.randint,
+    sleep: Callable[[float], None] = time.sleep,
+) -> int:
+    delay_seconds = randint(0, MAX_RANDOM_START_DELAY_SECONDS)
+    log(
+        "Scheduled check-in random start delay: "
+        f"{format_duration(delay_seconds)} ({delay_seconds} seconds)"
+    )
+    sleep(delay_seconds)
+    return delay_seconds
+
+
 def main() -> int:
     cron_expression, timezone_name, timezone = load_schedule_config()
     targets = parse_targets()
@@ -121,6 +137,7 @@ def main() -> int:
         next_run = get_next_run(now, cron_expression)
         log(f"Next run scheduled at {format_timestamp(next_run)}")
         sleep_until(next_run)
+        apply_random_start_delay()
 
         started_at = datetime.now(timezone)
         log(f"Starting scheduled check-in at {format_timestamp(started_at)}")
